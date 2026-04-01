@@ -1,0 +1,1133 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hızlı Değerlendirme Pro Final</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; transition: background-color 0.4s ease; }
+
+        /* 1. ÜST MENÜ */
+        .sticky-nav { position: sticky; top: 0; z-index: 60; background: white; box-shadow: 0 2px 10px -3px rgba(0,0,0,0.1); }
+        .class-badge { background: #1e293b; color: white; padding: 0.3rem 0.8rem; border-radius: 6px; font-weight: 800; font-size: 0.95rem; display: flex; align-items: center; gap: 0.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); white-space: nowrap; border: 1px solid #334155; }
+
+        /* 2. ÖĞRENCİ PANELİ */
+        .sticky-student-header { position: sticky; top: 86px; z-index: 40; padding-top: 5px; padding-bottom: 5px; }
+
+        /* 3. DERS SEKMELERİ */
+        .tab-btn { color: #64748b; border-bottom: 3px solid transparent; font-size: 0.9rem; }
+        .tab-btn:hover { background-color: #f8fafc; color: #334155; }
+        .tab-btn.active { border-bottom: 3px solid #2563eb; color: #1e40af; background: #eff6ff; }
+
+        .action-btn { display: flex; align-items: center; justify-content: center; font-weight: 800; border-radius: 8px; transition: all 0.1s; border: 2px solid transparent; height: 50px; box-shadow: 0 2px 3px rgba(0,0,0,0.05); font-size: 1rem; }
+        .action-btn:active { transform: scale(0.96); }
+        .score-strip { display: flex; width: 100%; gap: 6px; margin-top: 8px; }
+        .strip-btn { flex: 1; height: 38px; border-radius: 6px; font-weight: bold; font-size: 1rem; background: white; border: 1px solid #cbd5e1; color: #64748b; display: flex; align-items: center; justify-content: center; transition: all 0.1s; }
+        .strip-btn:hover { background: #e2e8f0; color: #0f172a; }
+        .strip-btn.active { background-color: #2563eb; color: white; border-color: #1d4ed8; box-shadow: 0 2px 4px rgba(37, 99, 235, 0.3); font-size: 1.1rem; }
+        .multi-part-row { background: #e2e8f0; padding: 12px; border-radius: 10px; margin-bottom: 12px; border: 1px solid #cbd5e1; }
+        #login-screen { position: fixed; top:0; left:0; width:100%; height:100%; background: #0f172a; z-index: 999; }
+        .summary-table th { background: #f8fafc; padding: 10px; border-bottom: 2px solid #e2e8f0; font-size: 0.85rem; text-transform: uppercase; }
+        .summary-table td { padding: 10px; border-bottom: 1px solid #f1f5f9; text-align: center; font-weight: 500; }
+        .summary-table tr:hover { background-color: #f1f5f9; }
+
+        .clear-btn { position: absolute; right: 0; top: 0; bottom: 0; width: 40px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; color: #ef4444; cursor: pointer; z-index: 20; }
+        .clear-btn:hover { background-color: #fee2e2; border-top-right-radius: 0.5rem; border-bottom-right-radius: 0.5rem; }
+
+        /* Gizli Scrollbar (Hızlı Menü İçin) */
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="pb-20" style="background-color: #fef2f2;" onclick="closeSearchOutside(event)">
+
+    <div id="login-screen" class="flex flex-col items-center justify-center text-white">
+        <h2 class="text-5xl font-black mb-12 tracking-tight">Sınıf Seçimi</h2>
+        <div class="grid grid-cols-2 gap-8 w-full max-w-lg px-6">
+            <button onclick="loadClass('A')" class="aspect-square bg-white text-slate-900 rounded-3xl text-5xl font-black hover:bg-blue-50 hover:scale-105 transition shadow-2xl border-4 border-transparent hover:border-blue-500">A</button>
+            <button onclick="loadClass('B')" class="aspect-square bg-white text-slate-900 rounded-3xl text-5xl font-black hover:bg-blue-50 hover:scale-105 transition shadow-2xl border-4 border-transparent hover:border-blue-500">B</button>
+            <button onclick="loadClass('C')" class="aspect-square bg-white text-slate-900 rounded-3xl text-5xl font-black hover:bg-blue-50 hover:scale-105 transition shadow-2xl border-4 border-transparent hover:border-blue-500">C</button>
+            <button onclick="loadClass('D')" class="aspect-square bg-white text-slate-900 rounded-3xl text-5xl font-black hover:bg-blue-50 hover:scale-105 transition shadow-2xl border-4 border-transparent hover:border-blue-500">D</button>
+        </div>
+
+        <div class="mt-8 flex gap-4">
+            <button onclick="openDataModal()" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-6 rounded-xl flex items-center gap-2 transition border border-gray-500">
+                <i class="fas fa-database"></i> Veri Yönetimi / Eski Veriyi Aktar
+            </button>
+        </div>
+        <div id="spinner" class="hidden mt-10"><i class="fas fa-circle-notch fa-spin text-5xl text-blue-400"></i> Firebase'e Bağlanıyor...</div>
+    </div>
+
+    <div id="app-content" style="display:none;">
+
+        <div class="sticky-nav">
+            <div class="max-w-7xl mx-auto px-4">
+                <div class="flex flex-col md:flex-row gap-2 items-center justify-between mb-1 pt-2">
+                    <div id="classBadgeDisplay" onclick="showLoginScreen()" title="Şube Değiştir" class="class-badge hidden md:flex min-w-[100px] justify-center cursor-pointer hover:bg-slate-700 transition"><span id="badgeText">A Şubesi</span></div>
+
+                    <div class="relative w-full md:max-w-md lg:max-w-lg">
+                        <div class="relative h-10"> <input type="text" id="searchInput" class="w-full h-full pl-9 pr-10 border-2 border-slate-300 rounded-lg bg-white focus:border-blue-600 focus:ring-0 font-bold text-sm outline-none shadow-sm transition" placeholder="Öğrenci Ara..." oninput="filterStudents()" onfocus="filterStudents()" autocomplete="off">
+                            <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 text-sm"></i>
+                            <div class="clear-btn" onclick="clearSearch()">
+                                <i class="fas fa-times"></i>
+                            </div>
+                        </div>
+                        <ul id="dropdownContainer" class="hidden absolute w-full bg-white mt-1 rounded-lg shadow-xl border border-slate-200 z-[100] max-h-60 overflow-y-auto"><ul id="searchResults" class="divide-y divide-slate-100 text-sm"></ul></ul>
+                    </div>
+
+                    <div class="flex gap-1.5 w-full md:w-auto justify-end">
+                        <div id="mobileClassBadge" onclick="showLoginScreen()" title="Şube Değiştir" class="class-badge md:hidden text-xs px-2 py-1 mr-auto cursor-pointer hover:bg-slate-700 transition"><span id="mobileBadgeText">A</span></div>
+
+                        <button onclick="openDataModal()" class="bg-slate-700 text-white px-2.5 py-1.5 rounded-lg font-bold text-xs shadow-sm hover:bg-slate-800 flex items-center gap-1.5 transition active:scale-95"><i class="fas fa-database"></i></button>
+
+                        <button onclick="openClassReport()" class="bg-teal-600 text-white px-2.5 py-1.5 rounded-lg font-bold text-xs shadow-sm hover:bg-teal-700 flex items-center gap-1.5 transition active:scale-95"><i class="fas fa-chart-bar"></i> <span class="hidden sm:inline">Özet</span></button>
+                        <button onclick="openEditModal()" class="bg-slate-600 text-white px-2.5 py-1.5 rounded-lg font-bold text-xs shadow-sm hover:bg-slate-700 flex items-center gap-1.5 transition active:scale-95"><i class="fas fa-list"></i> <span class="hidden sm:inline">Liste</span></button>
+
+                        <button onclick="syncToCloud()" id="syncBtn" class="flex-1 md:flex-none justify-center bg-orange-600 text-white px-4 py-1.5 rounded-lg font-black text-xs shadow-sm hover:bg-orange-700 flex items-center gap-1.5 transition active:scale-95 border-b-2 border-orange-800 active:border-b-0 active:translate-y-0.5">
+                            <i class="fas fa-cloud-upload-alt text-sm"></i>
+                            <span>KAYDET</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="flex space-x-1 border-b border-slate-200">
+                    <button id="tab-TR" class="tab-btn flex-1 py-2 text-center font-extrabold transition-colors active" onclick="switchTab('TR')">TÜRKÇE</button>
+                    <button id="tab-MAT" class="tab-btn flex-1 py-2 text-center font-extrabold transition-colors" onclick="switchTab('MAT')">MATEMATİK</button>
+                    <button id="tab-FEN" class="tab-btn flex-1 py-2 text-center font-extrabold transition-colors" onclick="switchTab('FEN')">FEN BİL.</button>
+                    <button id="tab-SOS" class="tab-btn flex-1 py-2 text-center font-extrabold transition-colors" onclick="switchTab('SOS')">SOSYAL</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="quickNav" class="fixed left-2 md:left-6 top-1/2 transform -translate-y-1/2 z-50 flex-col gap-2 bg-white/90 p-2 py-3 rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.12)] backdrop-blur-md border border-slate-100 hidden max-h-[85vh] overflow-y-auto hide-scrollbar">
+            </div>
+
+        <div class="max-w-5xl mx-auto px-2 pl-14 md:pl-20 pr-2 md:pr-4" id="mainContent" style="display:none;">
+            <div class="sticky-student-header">
+                <div class="bg-white/95 backdrop-blur-sm px-4 py-2.5 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between gap-2">
+
+                    <div class="flex items-center gap-2 overflow-hidden">
+                        <div class="bg-blue-50 w-8 h-8 rounded-full flex items-center justify-center text-blue-600 shrink-0">
+                            <i class="fas fa-user-graduate text-sm"></i>
+                        </div>
+                        <div class="flex items-baseline gap-2 truncate">
+                            <h2 id="studentNameDisplay" class="text-lg font-black text-slate-800 truncate"></h2>
+                            <span class="text-xs font-bold text-slate-400 hidden sm:inline shrink-0">Mart 2026 Değ.</span>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-1.5 shrink-0">
+                        <button onclick="markAllFull()" class="bg-emerald-500 text-white px-3 py-1.5 rounded-lg shadow-sm hover:bg-emerald-600 font-bold text-xs flex items-center gap-1.5 transition active:scale-95">
+                            <i class="fas fa-check-double"></i> <span class="hidden md:inline">TAMLA</span>
+                        </button>
+
+                        <div class="w-px h-5 bg-slate-200 mx-1"></div>
+
+                        <button onclick="downloadStudentCard()" class="text-purple-600 bg-purple-50 hover:bg-purple-100 px-2.5 py-1.5 rounded-lg border border-purple-100 font-bold text-xs transition flex items-center gap-1.5" title="Tek Karne İndir">
+                            <i class="fas fa-file-pdf"></i> <span class="hidden lg:inline">Tek</span>
+                        </button>
+                        <button onclick="downloadComprehensiveCard()" class="text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1.5 rounded-lg border border-indigo-100 font-bold text-xs transition flex items-center gap-1.5" title="Genel PDF İndir">
+                            <i class="fas fa-layer-group"></i> <span class="hidden lg:inline">Genel</span>
+                        </button>
+                        <button onclick="openWhatsappModal()" class="text-green-600 bg-green-50 hover:bg-green-100 px-2.5 py-1.5 rounded-lg border border-green-100 font-bold text-xs transition flex items-center gap-1.5" title="Whatsapp Mesajı Gönder">
+                            <i class="fab fa-whatsapp text-sm"></i> <span class="hidden lg:inline">Mesaj</span>
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+
+            <div id="questionsContainer" class="space-y-6 mt-6"></div>
+
+            <div class="mt-8 mb-12 flex flex-col sm:flex-row items-center justify-between bg-white/80 backdrop-blur-sm p-4 rounded-2xl shadow-sm border border-slate-200 gap-4">
+                <button onclick="scrollToTop()" class="w-full sm:w-auto bg-slate-100 hover:bg-slate-200 text-slate-600 px-6 py-3 rounded-xl font-bold transition flex items-center justify-center gap-2 border border-slate-300">
+                    <i class="fas fa-arrow-up"></i> Başa Dön
+                </button>
+                <button onclick="syncToCloud()" id="bottomSyncBtn" class="w-full sm:w-auto bg-orange-600 text-white px-8 py-3 rounded-xl font-black shadow-sm hover:bg-orange-700 flex items-center justify-center gap-2 transition active:scale-95 border-b-4 border-orange-800 active:border-b-0 active:translate-y-1">
+                    <i class="fas fa-cloud-upload-alt text-lg"></i>
+                    <span>KAYDET</span>
+                </button>
+            </div>
+
+        </div>
+
+        <div id="startMessage" class="flex flex-col items-center justify-center min-h-[60vh] text-slate-400">
+            <div class="bg-white p-8 rounded-full shadow-lg mb-6 border border-slate-100"><i class="fas fa-search text-6xl text-blue-300"></i></div>
+            <p class="font-bold text-2xl text-slate-600">Öğrenci arayarak başlayın.</p>
+        </div>
+    </div>
+
+    <div id="classReportModal" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-[70] backdrop-blur-sm">
+        <div class="bg-white p-6 rounded-2xl w-full max-w-6xl h-[90vh] flex flex-col shadow-2xl">
+            <div class="flex justify-between mb-4 border-b pb-4"><h3 class="text-2xl font-bold text-slate-800">Sınıf Genel Durumu</h3><button onclick="document.getElementById('classReportModal').classList.add('hidden'); document.getElementById('classReportModal').classList.remove('flex')" class="text-slate-400 hover:text-red-500 text-3xl transition"><i class="fas fa-times"></i></button></div>
+            <div class="overflow-auto flex-1 rounded-xl border border-slate-200"><table class="w-full text-left text-sm summary-table"><thead><tr><th class="sticky top-0 z-10">Öğrenci</th><th class="sticky top-0 z-10 text-center">TR</th><th class="sticky top-0 z-10 text-center">MAT</th><th class="sticky top-0 z-10 text-center">FEN</th><th class="sticky top-0 z-10 text-center">SOS</th><th class="sticky top-0 z-10 text-center bg-blue-100 text-blue-800">TOPLAM</th></tr></thead><tbody id="classReportBody" class="bg-white"></tbody></table></div>
+            <div class="mt-4 border-t pt-4 flex justify-end gap-3">
+                <button onclick="downloadClassTableExcel()" class="bg-green-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-green-700 flex items-center gap-2 shadow-lg transition transform active:scale-95"><i class="fas fa-file-excel text-xl"></i> Listeyi Excel İndir</button>
+                <button onclick="downloadClassTablePDF()" class="bg-red-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-red-700 flex items-center gap-2 shadow-lg transition transform active:scale-95"><i class="fas fa-file-pdf text-xl"></i> Listeyi PDF İndir</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="editModal" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-[60] backdrop-blur-sm">
+        <div class="bg-white p-8 rounded-3xl w-96 shadow-2xl">
+            <h3 class="font-bold mb-4 text-xl text-slate-800">Öğrenci Listesi</h3>
+            <textarea id="studentInput" class="w-full h-60 border-2 p-4 rounded-xl text-sm bg-slate-50 focus:border-blue-500 focus:ring-0 outline-none resize-none font-medium" placeholder="Ahmet Yılmaz&#10;Ayşe Demir..."></textarea>
+            <div class="mt-6 flex gap-3"><button onclick="saveStudentsLocal()" class="flex-1 bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition">Kaydet</button><button onclick="document.getElementById('editModal').classList.add('hidden'); document.getElementById('editModal').classList.remove('flex')" class="flex-1 bg-slate-200 text-slate-700 py-3 rounded-xl font-bold hover:bg-slate-300 transition">İptal</button></div>
+        </div>
+    </div>
+
+    <div id="waModal" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-[60] backdrop-blur-sm">
+        <div class="bg-white p-8 rounded-3xl w-full max-w-lg shadow-2xl">
+            <h3 class="font-bold mb-4 text-xl text-slate-800 flex items-center gap-2"><i class="fab fa-whatsapp text-green-500 text-2xl"></i> Veli Bilgilendirme Mesajı</h3>
+            <textarea id="waText" class="w-full h-[420px] border-2 p-4 rounded-xl text-sm bg-slate-50 focus:border-green-500 outline-none resize-y font-medium leading-relaxed" readonly></textarea>
+            <div class="mt-6 flex gap-3"><button onclick="copyWa()" class="flex-1 bg-green-500 text-white py-3 rounded-xl font-bold hover:bg-green-600 shadow-lg transition flex items-center justify-center gap-2"><i class="far fa-copy text-lg"></i> Kopyala</button><button onclick="document.getElementById('waModal').classList.add('hidden'); document.getElementById('waModal').classList.remove('flex')" class="flex-1 bg-slate-200 text-slate-700 py-3 rounded-xl font-bold hover:bg-slate-300 transition">Kapat</button></div>
+        </div>
+    </div>
+
+    <div id="dataModal" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-[80] backdrop-blur-sm">
+        <div class="bg-white p-8 rounded-3xl w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto">
+            <h3 class="font-bold mb-4 text-2xl text-slate-800 text-center">Veri Yönetimi</h3>
+
+            <div class="mb-8 p-4 bg-blue-50 rounded-xl border border-blue-100">
+                <h4 class="font-bold text-blue-800 mb-2"><i class="fas fa-sync-alt"></i> Verileri Getir</h4>
+                <p class="text-sm text-blue-600 mb-3">Buluttaki (Firebase) verilerinizi manuel olarak çağırmak isterseniz bu butonu kullanabilirsiniz.</p>
+                <div class="grid grid-cols-2 gap-2 mb-3">
+                    <select id="classSelect" class="p-2 border rounded-lg font-bold text-slate-700">
+                        <option value="A">A Şubesi</option>
+                        <option value="B">B Şubesi</option>
+                        <option value="C">C Şubesi</option>
+                        <option value="D">D Şubesi</option>
+                    </select>
+                    <button onclick="loadClass(document.getElementById('classSelect').value); document.getElementById('dataModal').classList.add('hidden')" id="btnDownloadSingle" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-lg transition">
+                        <i class="fas fa-cloud-download-alt"></i> Getir
+                    </button>
+                </div>
+            </div>
+
+            <div class="p-4 bg-orange-50 rounded-xl border border-orange-100">
+                <h4 class="font-bold text-orange-800 mb-2"><i class="fas fa-file-import"></i> Eski PythonAnywhere Verilerini Firebase'e Taşı</h4>
+                <p class="text-sm text-orange-600 mb-3">Eski JSON dosyanızdaki içeriği kopyalayıp buraya yapıştırın. Tek tıkla yeni sisteme aktarılacaktır.</p>
+
+                <div class="flex gap-2 mb-2">
+                    <select id="jsonClass" class="p-1 border rounded w-1/2 text-sm font-bold"><option value="A">A Şubesi</option><option value="B">B Şubesi</option><option value="C">C Şubesi</option><option value="D">D Şubesi</option></select>
+                    <select id="jsonSubject" class="p-1 border rounded w-1/2 text-sm font-bold"><option value="TR">Türkçe</option><option value="MAT">Matematik</option><option value="FEN">Fen Bil.</option><option value="SOS">Sosyal Bil.</option></select>
+                </div>
+
+                <textarea id="jsonInput" class="w-full h-32 border-2 p-3 rounded-xl text-xs bg-white focus:border-orange-500 outline-none resize-none font-mono" placeholder='{"status":"success", "students": ["Ahmet"], "scores": {"Ahmet": {"t1": 12}}}'></textarea>
+
+                <button onclick="saveManualJSON()" class="w-full mt-3 bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 rounded-lg transition">
+                    <i class="fas fa-upload"></i> Firebase'e Aktar
+                </button>
+            </div>
+
+            <button onclick="document.getElementById('dataModal').classList.add('hidden')" class="mt-6 w-full bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-3 rounded-xl transition">
+                Kapat
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // YENİ: FIREBASE ENTEGRASYONU
+        // ==========================================
+        const firebaseConfig = {
+            apiKey: "AIzaSyCzWg0ArosPt_O4t-veaqD8HdiSR9ygvFw",
+            authDomain: "bhveri.firebaseapp.com",
+            projectId: "bhveri",
+            storageBucket: "bhveri.firebasestorage.app",
+            messagingSenderId: "902116400674",
+            appId: "1:902116400674:web:96fa6356cea3d7499bf47b"
+        };
+
+        // Firebase'i Başlat
+        firebase.initializeApp(firebaseConfig);
+        const fsDB = firebase.firestore();
+        
+        // Çevrimdışı (Offline) Desteği Aç (İnternet kopsa bile sistem çalışır, gelince eşitler)
+        fsDB.enablePersistence().catch((err) => { console.log("Offline mode error:", err); });
+
+        const themeColors = {
+            'TR': '#fef2f2',  
+            'MAT': '#eff6ff', 
+            'FEN': '#f0fdf4', 
+            'SOS': '#fffbeb'  
+        };
+
+        let activeClass = "";
+        let activeSubject = "TR";
+        let students = [];
+        let db = {};
+        let currentStudent = null;
+
+        let autoSyncTimer = null;
+        function triggerAutoSync() {
+            if (autoSyncTimer) clearTimeout(autoSyncTimer);
+            autoSyncTimer = setTimeout(() => {
+                syncToCloud(); 
+            }, 1500); 
+        }
+
+        const questionsData = {
+            TR: [
+                { id: 't1', title: '1. Mevsimi Belirleme ve Kanıtlama', max: 12, type: 'score', step: 1, desc: 'Metindeki betimlemelerden (kar yağışı, beyaz örtü, kuşların barınak araması) yola çıkarak anlatılan mevsimi doğru belirler ve metinden uygun kanıtlarla destekler.' },
+                { id: 't2', title: '2. Çıkarım Yapma ve Kanıt Gösterme', max: 12, type: 'score', step: 1, desc: 'Metindeki beden dili ve davranışlardan (dudak büzmesi, omuz çökmesi) yola çıkarak kahramanın duygularını analiz eder ve sonucunu metinden kanıtlar.' },
+                { id: 't3', title: '3. Neden-Sonuç İlişkisi Kurma', max: 12, type: 'score', step: 4, desc: 'Metindeki detayları dikkatlice okuyarak kahramanın yaşadığı duygu değişimine (heyecanın yatışması) sebep olan durumu (yan taraftan gelen flüt sesi) doğru tespit eder.' },
+                { id: 't4', title: '4. Kelimede Anlam Türleri', max: 8, type: 'multi', parts:[{l:'Cam', v:2}, {l:'Perde', v:2}, {l:'Nota', v:2}, {l:'Dik Açı', v:2}], desc: 'Metinde geçen kelimelerin kullanıldıkları bağlama göre gerçek, mecaz veya terim anlamlı olduklarını başarıyla ayırt eder.' },
+                { id: 't5', title: '5. Deyimler ve Mecaz Anlam', max: 10, type: 'multi', parts:[{l:'Anlamı', v:5}, {l:'Anlam Türü', v:5}], desc: 'Metinde geçen "iç geçirmek" ifadesinin ne anlama geldiğini açıklar ve bu ifadenin gerçek değil, mecaz anlamda kullanıldığını kavrar.' },
+                { id: 't6', title: '6. Yabancı Kelimelerin Türkçe Karşılıkları', max: 10, type: 'multi', parts:[{l:'Start (Başlat)', v:5}, {l:'Link (Bağlantı)', v:5}], desc: 'Dilimize yabancı dillerden geçmiş kelimelerin (start, link) Türkçe karşılıklarını bularak dil bilincini gösterir.' },
+                { id: 't7', title: '7. "de" ve "ki" Bağlaçlarının Yazımı', max: 10, type: 'multi', parts:[{l:'"de" Bağlacı', v:5}, {l:'"ki" Bağlacı', v:5}], desc: 'Cümle içindeki ayrı yazılması gereken bağlaç ("de" ve "ki") kullanımlarındaki yazım hatalarını tespit eder ve kelimeleri doğru biçimleriyle yeniden yazar.' },
+                { id: 't8', title: '8. Noktalama İşaretleri', max: 7, type: 'multi', parts:[{l:'Tırnak İşaretleri', v:2}, {l:'Ünlem ve Soru', v:2}, {l:'Virgül ve Nokta', v:3}], desc: 'Cümle içinde boş bırakılan yerlere cümlenin anlam ve vurgusuna uygun noktalama işaretlerini doğru kurallarla yerleştirir.' },
+                { id: 't9', title: '9. Atasözü ve Metin İlişkilendirmesi', max: 10, type: 'score', step: 1, desc: '"Can çıkar, huy çıkmaz" atasözünün anlamını açıklar ve bu atasözünün verdiği mesaj ile kahramanın davranışları arasında mantıklı bir bağ kurar.' },
+                { id: 't10', title: '10. Hikâye Unsurları', max: 9, type: 'multi', parts:[{l:'Kişi', v:3}, {l:'Yer', v:3}, {l:'Olay', v:3}], desc: 'Okuduğu metnin temel hikâye unsurlarını (şahıs kadrosu, olayın geçtiği mekân ve ana olay örgüsü) doğru bir şekilde çözümler.' }
+            ],
+            MAT: [
+                { id: 'm1', title: '1. Çok Adımlı Çözüm (Baraj)', max: 10, type: 'multi', parts:[{l:'Mevcut Suyu Bulma', v:5}, {l:'İhtiyacı Hesaplama', v:5}], desc: 'Doğal sayılarla çok adımlı toplama ve çıkarma işlemlerini kullanarak barajdaki su miktarı gibi günlük yaşam problemlerini başarıyla çözer.' },
+                { id: 'm2', title: '2. Çarpma Problemi (Otel)', max: 10, type: 'multi', parts:[{l:'Toplam Oda Sayısı', v:5}, {l:'Toplam Ampul Sayısı', v:5}], desc: 'En çok üç basamaklı sayılarla iki aşamalı çarpma işlemi gerektiren problemleri analiz eder ve doğru işlem basamaklarıyla sonuca ulaşır.' },
+                { id: 'm3', title: '3. Bölme Problemi (Forma)', max: 10, type: 'score', step: 5, desc: 'Üç basamaklı doğal sayıları iki basamaklı doğal sayılara bölme işlemini günlük hayat durumlarına (birim fiyat hesaplama) başarıyla uygular.' },
+                { id: 'm4', title: '4. Kesir Tablosu Doldurma', max: 20, type: 'multi', parts:[{l:'Bileşik Kesir Model', v:4}, {l:'Basit Kesir Çeşidi', v:4}, {l:'Basit Kesir Model', v:4}, {l:'Tam Sayılı Çeşidi', v:4}, {l:'Tam Sayılı Okunuş', v:4}], desc: 'Basit, bileşik ve tam sayılı kesirleri tanır; bu kesirleri görsel modellerle ilişkilendirir ve okunuşlarını doğru bir şekilde ifade eder.' },
+                { id: 'm5', title: '5. Birim Kesirleri Sıralama', max: 10, type: 'multi', parts:[{l:'Doğru Kesirleri Yazma', v:6}, {l:'Küçükten Büyüğe Sıralama', v:4}], desc: 'Bir bütünü eş parçalara ayırarak birim kesirleri (1/2, 1/4 vb.) belirler ve bu kesirleri büyüklüklerine göre küçükten büyüğe doğru sıralar.' },
+                { id: 'm6', title: '6. Kesirleri Sıralama (Gezegenler)', max: 5, type: 'score', step: 1, desc: 'Paydaları eşit olan kesirlerin büyüklüklerini karşılaştırır ve büyükten küçüğe doğru sıralayarak eşitsizlik sembolleriyle (>, <) ifade eder.' },
+                { id: 'm7', title: '7. Kesirlerde Toplama', max: 5, type: 'score', step: 1, desc: 'Paydaları eşit kesirlerle matematiksel toplama işlemi yapar ve elde ettiği sonucu görsel tablodaki verilerle doğru bir şekilde eşleştirir.' },
+                { id: 'm8', title: '8. Kesirlerde Çıkarma', max: 5, type: 'score', step: 1, desc: 'Paydaları eşit kesirlerle çıkarma işlemi yapar ve iki gezegenin çekim gücü gibi çokluklar arasındaki matematiksel farkı kesir olarak hesaplar.' },
+                { id: 'm9', title: '9. Kesir Kadarı (Robot Ağırlığı)', max: 5, type: 'score', step: 1, desc: 'Bütün olarak verilen bir çokluğun (240 kg), belirtilen basit kesir kadarını bulmak için gerekli bölme ve çarpma adımlarını sırasıyla uygular.' },
+                { id: 'm10', title: '10. Zaman Dönüşümü (Film)', max: 5, type: 'multi', parts:[{l:'Süreleri Dakikaya Çevirme', v:3}, {l:'En Kısa Filmi İşaretleme', v:2}], desc: 'Saat ve dakika cinsinden verilen farklı zaman ölçülerini standart dakika birimine çevirir ve zaman sürelerini doğru bir şekilde karşılaştırır.' },
+                { id: 'm11', title: '11. Zaman Ölçme (Film Bitişi)', max: 5, type: 'score', step: 1, desc: 'Saat ve dakika gösteren zaman ölçüleriyle toplama işlemi gerektiren günlük yaşam problemlerini hesaplayarak varış/bitiş saatini bulur.' },
+                { id: 'm12', title: '12. Sütun Grafiği (Sıcaklık Farkı)', max: 4, type: 'multi', parts:[{l:'Max-Min Değer Belirleme', v:2}, {l:'Farkı Hesaplama', v:2}], desc: 'Sütun grafiğindeki verileri okuyarak haftanın en yüksek ve en düşük değerlerini belirler, aralarındaki farkı matematiksel olarak doğru hesaplar.' },
+                { id: 'm13', title: '13. Sütun Grafiği Yorumlama', max: 6, type: 'score', step: 2, desc: 'Sütun grafiğinde yer alan sıcaklık verilerini analiz eder ve grafikte belirli bir şartı (20 derecenin üzerinde olma) sağlayan tüm durumları eksiksiz tespit eder.' }
+            ],
+            FEN: [
+                { id: 'f1', title: '1. Kütle Ölçümü (Beher ve Sıvı)', max: 10, type: 'multi', parts:[{l:'Brüt Kütle (2 kg)', v:2}, {l:'Dönüşüm (2000 g)', v:3}, {l:'Net Kütle (1170 g)', v:5}], desc: 'Eşit kollu terazi ölçümlerini analiz eder, kilogram-gram dönüşümünü yapar ve darayı çıkararak net kütleyi hesaplar.' },
+                { id: 'f2', title: '2. Mıknatıslar ve Yaylar', max: 8, type: 'multi', parts:[{l:'Doğru Yaylar (1 ve 2)', v:4}, {l:'Neden (Zıt Kutuplar)', v:4}], desc: 'Mıknatısların zıt kutuplarının birbirini çektiğini, aynı kutupların ittiğini ve bu manyetik kuvvetin esnek cisimler üzerindeki etkisini açıklar.' },
+                { id: 'f3', title: '3. Doğru/Yanlış Etkinliği', max: 15, type: 'multi', parts:[{l:'1. Kuvvet (D)', v:3}, {l:'2. Gramafon (D)', v:3}, {l:'3. Zıt Kutuplar (Y)', v:3}, {l:'4. Gazların Şekli (Y)', v:3}, {l:'5. Suyun Donması (Y)', v:3}], desc: 'Kuvvetin etkileri, ses teknolojileri, mıknatıslar ve maddenin hâlleri ile ilgili temel bilimsel kavramların doğruluğunu ayırt eder.' },
+                { id: 'f4', title: '4. Boşluk Doldurma', max: 15, type: 'multi', parts:[{l:'1. Şeklini', v:3}, {l:'2. Gaz', v:3}, {l:'3. Hacmi', v:3}, {l:'4. Donma', v:3}, {l:'5. Kaset', v:3}], desc: 'Kuvvet, maddenin özellikleri (hacim, şekil), hâl değişimleri ve geçmiş ses teknolojilerine ait terimleri cümle içindeki bağlamına uygun kullanır.' },
+                { id: 'f5', title: '5. Saf Madde ve Karışım Tablosu', max: 10, type: 'multi', parts:[{l:'Limonata (Karışım)', v:2}, {l:'Çeşme Suyu (Karışım)', v:2}, {l:'Hava (Karışım)', v:2}, {l:'Demir (Saf Madde)', v:2}, {l:'Tuz (Saf Madde)', v:2}], desc: 'Günlük hayatta karşılaştığı maddeleri, içerdikleri madde sayısına (yapılarına) göre "saf madde" veya "karışım" olarak doğru sınıflandırır.' },
+                { id: 'f6', title: '6. Karışımları Ayırma Yöntemleri', max: 20, type: 'multi', parts:[{l:'1. Un-Mercimek (Eleme)', v:4}, {l:'2. Su-Talaş (Süzme)', v:4}, {l:'3. Nikel-Tebeşir (Mıknatıs)', v:4}, {l:'4. Şeker-Su (Buharlaştırma)', v:4}, {l:'5. Kum-Çakıl (Eleme)', v:4}], desc: 'Farklı fiziksel özelliklere sahip maddelerden oluşan karışımları ayırmak için en uygun bilimsel yöntemleri (süzme, eleme, buharlaştırma vb.) belirler.' },
+                { id: 'f7', title: '7. Aydınlatma Teknolojileri', max: 12, type: 'multi', parts:[{l:'Gaz Yağı (Kandil/Lamba)', v:2}, {l:'Holonyak (LED)', v:2}, {l:'Başlangıç (Ateş)', v:2}, {l:'Gaz ve Tüp (Floresan)', v:2}, {l:'Hayvansal Yağ (Meşale/Mum)', v:2}, {l:'Akım ve Tel (Ampul)', v:2}], desc: 'Geçmişten günümüze aydınlatma teknolojilerini gelişim sürecine ve çalışma prensiplerine göre tanır, tanımlarla aletleri doğru eşleştirir.' },
+                { id: 'f8', title: '8. Işık Kirliliği ve Doğal Yaşam', max: 10, type: 'score', step: 3, desc: 'Işık kirliliğinin gökyüzü (yıldız) gözlemlerini nasıl engellediğini ve göçmen kuşların yön bulma becerilerini nasıl bozduğunu neden-sonuç ilişkisiyle yorumlar.' }
+            ],
+            SOS: [
+                { id: 's1', title: '1. Millî Kültür Ögeleri', max: 8, type: 'score', step: 2, desc: 'Okuduğu metinde geçen geleneksel unsurları (Türk kahvesi, lokum, bağlama vb.) tespit ederek millî kültürümüze ait ögeleri ayırt eder.' },
+                { id: 's2', title: '2. Geçmişten Günümüze Oyunlar', max: 8, type: 'score', step: 2, desc: 'Metinden yola çıkarak çocuk oyunlarının geçmişten günümüze nasıl bir değişim geçirdiğini (doğal ortam/materyalden teknolojik/özel alanlara geçiş) kanıtlarla açıklar.' },
+                { id: 's3', title: '3. Kültürel Süreklilik', max: 4, type: 'score', step: 2, desc: 'Kültürel ögelerin zaman içinde değişse de temel özellikleriyle varlığını sürdürdüğünü ifade eden "kültürel süreklilik" kavramını metinden bularak açıklar.' },
+                { id: 's4', title: '4. Güneşe Göre Yön Bulma', max: 10, type: 'score', step: 5, desc: 'Sağ kolunu batan güneşe (batıya) uzatan birinin yüzünün güneye, sırtının kuzeye bakacağı bilgisini kullanarak doğada yön bulma becerisini sergiler.' },
+                { id: 's5', title: '5. Millî Mücadele Haritası', max: 18, type: 'multi', parts: [{l:'Samsun (2)', v:3}, {l:'Havza (3)', v:3}, {l:'Amasya (4)', v:3}, {l:'Erzurum (5)', v:3}, {l:'Sivas (6)', v:3}, {l:'Ankara (7)', v:3}], desc: 'Millî Mücadele Dönemi\'nin başlamasıyla ilgili kritik olayları harita üzerindeki doğru şehirlerle eşleştirerek kronolojik ve mekânsal algısını gösterir.' },
+                { id: 's6', title: '6. Kroki Üzerinde Yönler', max: 8, type: 'multi', parts: [{l:'Batı (Okul)', v:2}, {l:'Doğu (Eczane)', v:2}, {l:'Kuzey (Eczane Bina)', v:2}, {l:'Batı (Parka Gidiş)', v:2}], desc: 'Verilen mahalle krokisi üzerinde ana yönleri (kuzey, güney, doğu, batı) kullanarak binaların birbirine göre konumlarını kavramsal olarak doğru ifade eder.' },
+                { id: 's7', title: '7. Doğal ve Beşerî Unsurlar', max: 12, type: 'multi', parts: [{l:'Doğal Unsur 1 (Irmak vb.)', v:3}, {l:'Doğal Unsur 2 (Dağ vb.)', v:3}, {l:'Beşerî Unsur 1 (Çeşme vb.)', v:3}, {l:'Beşerî Unsur 2 (Bağ vb.)', v:3}], desc: 'Okuduğu şiirdeki unsurları analiz ederek insan eli değmeden oluşan doğal unsurlar ile insan yapımı beşerî unsurları birbirinden başarıyla ayırt eder.' },
+                { id: 's8', title: '8. İlgi, İhtiyaç ve Yetenek', max: 6, type: 'multi', parts: [{l:'1. Kart (İlgi)', v:2}, {l:'2. Kart (İhtiyaç)', v:2}, {l:'3. Kart (Yetenek)', v:2}], desc: 'Bireysel özellikleri ve eşyaları inceleyerek "ilgi, ihtiyaç ve yetenek" kavramlarını günlük yaşamdaki karşılıklarıyla doğru eşleştirir.' },
+                { id: 's9', title: '9. İstek ve İhtiyaç Önceliği', max: 4, type: 'score', step: 2, desc: 'Alışveriş planlamasında temel ihtiyaçların (bot gibi), isteklerden (ilgi alanları gibi) daha önce karşılanması gerektiğini mantıklı bir gerekçeyle açıklar.' },
+                { id: 's10', title: '10. Engellilere Yönelik Empati', max: 6, type: 'score', step: 2, desc: 'Engelli bireylerin günlük hayatta karşılaştıkları zorlukları deneyimlemenin, toplumda empati, farkındalık ve olumlu bir bakış açısı geliştireceğini yorumlar.' },
+                { id: 's11', title: '11. Çocuk Hakları', max: 6, type: 'multi', parts: [{l:'1. Hak', v:2}, {l:'2. Hak', v:2}, {l:'3. Hak', v:2}], desc: 'Örnek bir olay üzerinden, Birleşmiş Milletler Çocuk Hakları Sözleşmesi\'nde yer alan oyun, dinlenme, eğitim ve görüş bildirme gibi temel haklarını sıralar.' },
+                { id: 's12', title: '12. Yaşa Uygun Sorumluluklar', max: 10, type: 'multi', parts: [{l:'Balığa Yem Verme', v:2}, {l:'Kıyafetleri Sepete Atma', v:2}, {l:'Sofraya Yardım Etme', v:2}, {l:'Çantayı Hazırlama', v:2}, {l:'Çöpleri Atma', v:2}], desc: 'Bireylerin üstlenmesi gereken görevlerin yaşa göre değiştiğini kavrayarak 10 yaşındaki bir çocuğun alabileceği sorumlulukları doğru sınıflandırır.' }
+            ]
+        };
+
+        function showLoginScreen() {
+            document.getElementById('app-content').style.display = 'none';
+            document.getElementById('login-screen').style.display = 'flex';
+        }
+
+        function openDataModal() { document.getElementById('dataModal').classList.remove('hidden'); document.getElementById('dataModal').classList.add('flex'); }
+
+        // YENİ: FIREBASE MIGRATION ARACI
+        async function saveManualJSON() {
+            const jsonText = document.getElementById('jsonInput').value.trim();
+            if(!jsonText) return alert("Lütfen eski JSON verilerinizi yapıştırın.");
+
+            try {
+                const data = JSON.parse(jsonText);
+                const cls = document.getElementById('jsonClass').value;
+                const subj = document.getElementById('jsonSubject').value;
+
+                // Veriyi doğrudan Firebase'e yaz
+                await fsDB.collection(cls).doc(subj).set({
+                    students: data.students || [],
+                    scores: data.scores || {}
+                });
+
+                alert(`✅ ${cls} Şubesi ${subj} dersi eski verileri Firebase'e BAŞARIYLA TAŞINDI!`);
+                document.getElementById('studentInput').value = "";
+
+                if(activeClass === cls && activeSubject === subj) loadClass(cls);
+            } catch(e) {
+                alert("Hata oluştu! Geçersiz JSON formatı olabilir. " + e);
+            }
+        }
+
+        function updateTabIndicators() {
+            if (!currentStudent) return;
+            const subs = ['TR', 'MAT', 'FEN', 'SOS'];
+            const names = {'TR': 'TÜRKÇE', 'MAT': 'MATEMATİK', 'FEN': 'FEN BİL.', 'SOS': 'SOSYAL'};
+
+            subs.forEach(subj => {
+                const tabBtn = document.getElementById(`tab-${subj}`);
+                if (!tabBtn) return;
+
+                const hasData = db[currentStudent] && db[currentStudent][subj] && Object.keys(db[currentStudent][subj]).length > 0;
+
+                if (hasData) {
+                    tabBtn.innerHTML = `${names[subj]} <i class="fas fa-check-circle text-green-500 ml-1" title="Kaydedildi"></i>`;
+                } else {
+                    tabBtn.innerHTML = names[subj];
+                }
+            });
+        }
+
+        function renderQuestions() {
+            const container = document.getElementById('questionsContainer');
+            const quickNav = document.getElementById('quickNav');
+            container.innerHTML = "";
+            quickNav.innerHTML = "";
+
+            if (!db[currentStudent]) db[currentStudent] = {};
+            if (!db[currentStudent][activeSubject]) db[currentStudent][activeSubject] = {};
+
+            const studentData = db[currentStudent][activeSubject];
+            const currentQuestions = questionsData[activeSubject];
+
+            currentQuestions.forEach((q, index) => {
+                const card = document.createElement('div');
+                card.id = `qcard-${q.id}`;
+
+                let isFull = false;
+                let isTouched = false;
+                let isZero = false;
+                let score = -1;
+
+                if (q.type === 'score') {
+                    score = studentData[q.id] !== undefined ? studentData[q.id] : -1;
+                    if(score !== -1) {
+                        isTouched = true;
+                        if(score === q.max) isFull = true;
+                        if(score === 0) isZero = true;
+                    }
+                } else if (q.type === 'multi') {
+                    const sub = studentData[q.id] || {};
+                    if(Object.keys(sub).length > 0) {
+                        isTouched = true;
+                        const total = Object.values(sub).reduce((a,b)=>a+b,0);
+                        if(total === q.max) isFull = true;
+                        if(total === 0) isZero = true;
+                    }
+                }
+
+                let navClass = "bg-slate-100 text-slate-500 hover:bg-slate-200 border border-slate-200";
+                if (isTouched) {
+                    if (isFull) navClass = "bg-[#10b981] text-white shadow-[0_2px_8px_rgba(16,185,129,0.4)] border-transparent";
+                    else if (isZero) navClass = "bg-[#ef4444] text-white shadow-[0_2px_8px_rgba(239,68,68,0.4)] border-transparent";
+                    else navClass = "bg-[#f97316] text-white shadow-[0_2px_8px_rgba(249,115,22,0.4)] border-transparent";
+                }
+
+                const navBtn = document.createElement('button');
+                navBtn.innerText = index + 1;
+                navBtn.className = `w-9 h-9 rounded-full text-[12px] font-black flex items-center justify-center transition-all duration-300 shrink-0 ${navClass} hover:scale-110 hover:-translate-y-0.5`;
+                navBtn.onclick = () => {
+                    document.getElementById(`qcard-${q.id}`).scrollIntoView({ behavior: 'smooth', block: 'center' });
+                };
+                quickNav.appendChild(navBtn);
+
+                card.className = `bg-white p-4 rounded-xl shadow-sm border-2 transition-all duration-150 ${isFull ? 'border-green-500 bg-green-50/20' : 'border-white hover:border-blue-200'}`;
+
+                let html = `
+                    <div class="flex justify-between items-start mb-3 gap-2">
+                        <div class="flex-1">
+                            <h3 class="font-extrabold text-slate-800 text-lg">${q.title}</h3>
+                            <p class="text-xs text-slate-500">${q.desc}</p>
+                        </div>
+                        <div class="flex flex-col items-end gap-1 shrink-0">
+                            <span class="bg-slate-100 text-slate-500 text-xs font-black px-3 py-1 rounded block text-center w-full border border-slate-200">MAX: ${q.max}</span>
+                            <div class="flex gap-1 w-full mt-1">
+                                <button onclick="setQuestionFull('${q.id}')" class="flex-1 text-[10px] font-bold bg-green-50 text-green-600 border border-green-200 py-1 rounded hover:bg-green-500 hover:text-white transition tracking-tighter" title="Tüm Soruyu Tam Puan Yap">TAM</button>
+                                <button onclick="setQuestionZero('${q.id}')" class="flex-1 text-[10px] font-bold bg-red-50 text-red-600 border border-red-200 py-1 rounded hover:bg-red-500 hover:text-white transition tracking-tighter" title="Tüm Soruyu Sıfır Puan Yap">YOK</button>
+                            </div>
+                        </div>
+                    </div>`;
+
+                if(q.type === 'score') {
+                    const half = Math.floor(q.max / 2);
+                    html += `
+                        <div class="flex gap-2 mb-2">
+                            <button onclick="setScore('${q.id}', ${q.max})" class="action-btn flex-1 bg-white text-green-600 border-green-200 hover:bg-green-50 ${score===q.max ? 'bg-green-500 text-white border-green-600' : ''}"><i class="fas fa-check mr-2"></i> TAM</button>
+                            <button onclick="setScore('${q.id}', ${half})" class="action-btn flex-1 bg-white text-orange-600 border-orange-200 hover:bg-orange-50 ${score===half ? 'bg-orange-500 text-white border-orange-600' : ''}"><i class="fas fa-adjust mr-2"></i> YARIM</button>
+                            <button onclick="setScore('${q.id}', 0)" class="action-btn flex-1 bg-white text-red-600 border-red-200 hover:bg-red-50 ${score===0 ? 'bg-red-500 text-white border-red-600' : ''}"><i class="fas fa-times mr-2"></i> YOK</button>
+                        </div>
+                        <div class="score-strip">`;
+                    const step = q.step || 1;
+                    for(let i = q.max; i >= 0; i -= step) {
+                        html += `<button onclick="setScore('${q.id}', ${i})" class="strip-btn ${score===i ? 'active' : ''}">${i}</button>`;
+                    }
+                    html += `</div>`;
+                }
+
+                if(q.type === 'multi') {
+                    const subData = studentData[q.id] || {};
+                    html += `<div class="space-y-3">`;
+                    q.parts.forEach((p, idx) => {
+                        const sScore = subData[idx] !== undefined ? subData[idx] : -1;
+                        const sHalf = Math.floor(p.v / 2);
+                        html += `
+                            <div class="multi-part-row">
+                                <div class="flex justify-between items-center mb-2"><span class="font-bold text-slate-700 text-sm">${p.l}</span><span class="text-xs text-slate-400 border px-1 rounded bg-white">Max:${p.v}</span></div>
+                                <div class="flex gap-1 mb-2">
+                                    <button onclick="setMulti('${q.id}', ${idx}, ${p.v})" class="action-btn flex-1 text-xs rounded-md h-8 bg-white text-green-600 border-green-200 hover:bg-green-50 ${sScore===p.v ? 'bg-green-500 text-white border-green-600' : ''}">TAM</button>
+                                    <button onclick="setMulti('${q.id}', ${idx}, ${sHalf})" class="action-btn flex-1 text-xs rounded-md h-8 bg-white text-orange-600 border-orange-200 hover:bg-orange-50 ${sScore===sHalf ? 'bg-orange-500 text-white border-orange-600' : ''}">YARIM</button>
+                                    <button onclick="setMulti('${q.id}', ${idx}, 0)" class="action-btn flex-1 text-xs rounded-md h-8 bg-white text-red-600 border-red-200 hover:bg-red-50 ${sScore===0 ? 'bg-red-500 text-white border-red-600' : ''}">YOK</button>
+                                </div>
+                                <div class="score-strip">`;
+                        let pStep = p.v >= 10 ? 5 : 1;
+                        for(let k = p.v; k >= 0; k -= pStep) {
+                            html += `<button onclick="setMulti('${q.id}', ${idx}, ${k})" class="strip-btn h-8 text-xs ${sScore===k ? 'active' : ''}">${k}</button>`;
+                        }
+                        html += `</div></div>`;
+                    });
+                    html += `</div>`;
+                }
+                card.innerHTML = html; container.appendChild(card);
+            });
+
+            updateTabIndicators();
+        }
+
+        function setScore(id, val) { db[currentStudent][activeSubject][id] = val; renderQuestions(); triggerAutoSync(); }
+        function setMulti(id, idx, val) {
+            if(!db[currentStudent][activeSubject][id]) db[currentStudent][activeSubject][id] = {};
+            db[currentStudent][activeSubject][id][idx] = val;
+            renderQuestions();
+            triggerAutoSync();
+        }
+
+        function setQuestionFull(id) {
+            const q = questionsData[activeSubject].find(x => x.id === id);
+            if(q.type === 'score') {
+                db[currentStudent][activeSubject][q.id] = q.max;
+            } else if(q.type === 'multi') {
+                let p = {};
+                q.parts.forEach((x, i) => p[i] = x.v);
+                db[currentStudent][activeSubject][q.id] = p;
+            }
+            renderQuestions();
+            triggerAutoSync();
+        }
+
+        function setQuestionZero(id) {
+            const q = questionsData[activeSubject].find(x => x.id === id);
+            if(q.type === 'score') {
+                db[currentStudent][activeSubject][q.id] = 0;
+            } else if(q.type === 'multi') {
+                let p = {};
+                q.parts.forEach((x, i) => p[i] = 0);
+                db[currentStudent][activeSubject][q.id] = p;
+            }
+            renderQuestions();
+            triggerAutoSync();
+        }
+
+        function markAllFull() {
+            if(!currentStudent) return;
+            questionsData[activeSubject].forEach(q => {
+                if(q.type === 'score') db[currentStudent][activeSubject][q.id] = q.max;
+                else if(q.type === 'multi') { let p = {}; q.parts.forEach((x, i) => p[i] = x.v); db[currentStudent][activeSubject][q.id] = p; }
+            });
+            renderQuestions();
+            triggerAutoSync();
+        }
+
+        // YENİ: FIREBASE İLE VERİ ÇEKME
+        async function loadClass(className) {
+            activeClass = className;
+            const badge = document.getElementById('badgeText');
+            const mobileBadge = document.getElementById('mobileBadgeText');
+            if(badge) badge.innerText = className + " Şubesi";
+            if(mobileBadge) mobileBadge.innerText = className;
+
+            document.getElementById('spinner').classList.remove('hidden');
+
+            const subs = ['TR', 'MAT', 'FEN', 'SOS'];
+
+            try {
+                for (const subj of subs) {
+                    const docRef = await fsDB.collection(className).doc(subj).get();
+                    if (docRef.exists) {
+                        const data = docRef.data();
+                        if (subj === activeSubject && data.students) students = data.students || [];
+
+                        const incomingScores = data.scores || {};
+                        Object.keys(incomingScores).forEach(s => {
+                            if (!db[s]) db[s] = {};
+                            db[s][subj] = incomingScores[s];
+                        });
+                    }
+                }
+
+                document.getElementById('spinner').classList.add('hidden');
+                document.getElementById('login-screen').style.display = 'none';
+                document.getElementById('app-content').style.display = 'block';
+
+                if(currentStudent) {
+                    renderQuestions();
+                    scrollToTop(); 
+                }
+            } catch (e) {
+                console.error(e);
+                alert("Bağlantı Hatası: Lütfen internet bağlantınızı kontrol edin.");
+                document.getElementById('spinner').classList.add('hidden');
+            }
+        }
+
+        function switchTab(subj) {
+            activeSubject = subj;
+
+            document.body.style.backgroundColor = themeColors[subj];
+
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('tab-' + subj).classList.add('active');
+
+            if(activeClass) loadClass(activeClass);
+            scrollToTop(); 
+        }
+
+        function openWhatsappModal() {
+            if(!currentStudent) return;
+            const subjectFullNames = { TR:'Türkçe', MAT:'Matematik', FEN:'Fen Bilimleri', SOS:'Sosyal Bilgiler' };
+            const subjectEmojis   = { TR:'📖', MAT:'📐', FEN:'🔬', SOS:'🌍' };
+            const line = '─'.repeat(34);
+
+            let msg = `📋 *MART 2026 DEĞERLENDİRME BİLGİLENDİRMESİ*\n`;
+            msg += `👤 *${currentStudent}* —  ${activeClass} Şubesi\n`;
+            msg += `${line}\n\n`;
+
+            let grandTotal = 0, grandMax = 0;
+            const subjResults = {};
+
+            ['TR','MAT','FEN','SOS'].forEach(subj => {
+                const data = (db[currentStudent] && db[currentStudent][subj]) ? db[currentStudent][subj] : {};
+                const qList = questionsData[subj];
+                let subTotal = 0, subMax = 0;
+                const tamlar = [], kismilar = [], sifirlar = [];
+
+                qList.forEach(q => {
+                    const sc  = calculateSafeScore(data, q);
+                    const raw = data[q.id];
+                    const touched = raw !== undefined && raw !== null && (typeof raw === 'number' ? true : Object.keys(raw).length > 0);
+                    subTotal += sc; subMax += q.max;
+
+                    if (!touched) return; 
+
+                    const qName = q.title.replace(/^\d+\.\s*/, '');
+                    const pct   = q.max > 0 ? Math.round(sc / q.max * 100) : 0;
+
+                    if (sc === q.max) {
+                        tamlar.push(qName);
+                    } else if (sc === 0) {
+                        sifirlar.push(qName);
+                    } else {
+                        if (q.type === 'multi' && typeof raw === 'object' && raw !== null) {
+                            const eksikParcalar = q.parts
+                                .map((p, pi) => ({ l: p.l, v: p.v, sc: raw[pi] !== undefined ? raw[pi] : 0 }))
+                                .filter(p => p.sc < p.v)
+                                .map(p => p.l);
+                            if (eksikParcalar.length > 0) {
+                                kismilar.push(`${qName} _(eksik adım: ${eksikParcalar.join(', ')})_`);
+                            } else {
+                                kismilar.push(qName);
+                            }
+                        } else {
+                            kismilar.push(qName);
+                        }
+                    }
+                });
+
+                grandTotal += subTotal; grandMax += subMax;
+                subjResults[subj] = { subTotal, subMax, tamlar, kismilar, sifirlar };
+            });
+
+            ['TR','MAT','FEN','SOS'].forEach(subj => {
+                const { subTotal, subMax, tamlar, kismilar, sifirlar } = subjResults[subj];
+                const pct  = subMax > 0 ? Math.round(subTotal / subMax * 100) : 0;
+                const emoji = subjectEmojis[subj];
+
+                let seviye = '';
+                if (pct >= 85)      seviye = 'Çok İyi ✨';
+                else if (pct >= 70) seviye = 'İyi 👍';
+                else if (pct >= 50) seviye = 'Gelişiyor 📈';
+                else                seviye = 'Destek Gerekli ⚡';
+
+                msg += `${emoji} *${subjectFullNames[subj].toUpperCase()}* — ${seviye}\n`;
+
+                if (tamlar.length > 0) {
+                    msg += `✅ *Başarıyla kazanılan konular:*\n`;
+                    tamlar.forEach(t => msg += `   • ${t}\n`);
+                }
+                if (kismilar.length > 0) {
+                    msg += `⚠️ *Tekrar edilmesi önerilen konular:*\n`;
+                    kismilar.forEach(k => msg += `   • ${k}\n`);
+                }
+                if (sifirlar.length > 0) {
+                    msg += `📚 *Üzerinde daha fazla çalışılması gereken konular:*\n`;
+                    sifirlar.forEach(s => msg += `   • ${s}\n`);
+                }
+
+                if (tamlar.length === questionsData[subj].length) {
+                    msg += `   🌟 Bu dersteki tüm kazanımlar başarıyla tamamlandı!\n`;
+                } else if (sifirlar.length === 0 && kismilar.length <= 2) {
+                    msg += `   💪 Bu ders için genel gidişat çok olumlu.\n`;
+                }
+                msg += `\n`;
+            });
+
+            const gPct = grandMax > 0 ? Math.round(grandTotal / grandMax * 100) : 0;
+            msg += `${line}\n`;
+            if (gPct >= 85) {
+                msg += `🏆 *Genel Değerlendirme:* Öğrencimiz bu dönemde tüm derslerde çok başarılı bir performans sergiledi. Tebrikler! 🌟\n`;
+            } else if (gPct >= 70) {
+                msg += `👍 *Genel Değerlendirme:* Öğrencimiz genel olarak iyi bir seviyede. Eksik konulara düzenli çalışmaya devam edilmesi önerilir.\n`;
+            } else if (gPct >= 50) {
+                msg += `📈 *Genel Değerlendirme:* Öğrencimiz gelişim sürecinde. Belirtilen konularda düzenli tekrar ve alıştırma yapılması önerilir.\n`;
+            } else {
+                msg += `⚡ *Genel Değerlendirme:* Öğrencimizin bazı temel konularda ek desteğe ihtiyacı var. Birlikte çalışmayı sürdüreceğiz.\n`;
+            }
+
+            msg += `\nSaygılarımla,\n*${activeClass} Şubesi Sınıf Öğretmeni*`;
+
+            document.getElementById('waText').value = msg;
+            document.getElementById('waModal').classList.remove('hidden');
+            document.getElementById('waModal').classList.add('flex');
+        }
+
+        function getSubjectName(c) { return c==='TR'?'Türkçe':c==='MAT'?'Matematik':c==='FEN'?'Fen Bil.':c==='SOS'?'Sosyal':''; }
+
+        function filterStudents() {
+            const val = document.getElementById('searchInput').value.toLocaleUpperCase('tr');
+            const list = document.getElementById('searchResults');
+            const cont = document.getElementById('dropdownContainer');
+            list.innerHTML = "";
+            if(!val) { cont.classList.add('hidden'); return; }
+            const m = students.filter(s=>s.toLocaleUpperCase('tr').includes(val));
+            if(m.length>0) {
+                cont.classList.remove('hidden');
+                m.forEach(s => {
+                    const li = document.createElement('li');
+                    li.className = "px-4 py-3 cursor-pointer border-b hover:bg-blue-50 flex justify-between";
+                    const isDone = db[s] && db[s][activeSubject] && Object.keys(db[s][activeSubject]).length > 0;
+                    li.innerHTML = `<span>${s}</span> ${isDone ? '<i class="fas fa-check text-green-500"></i>' : ''}`;
+                    li.onclick = () => selectStudent(s);
+                    list.appendChild(li);
+                });
+            } else cont.classList.add('hidden');
+        }
+
+        function selectStudent(name) {
+            currentStudent = name;
+            document.getElementById('searchInput').value = name;
+            document.getElementById('dropdownContainer').classList.add('hidden');
+            document.getElementById('startMessage').style.display = 'none';
+            document.getElementById('mainContent').style.display = 'block';
+            document.getElementById('studentNameDisplay').innerText = name;
+
+            document.getElementById('quickNav').classList.remove('hidden');
+            document.getElementById('quickNav').classList.add('flex');
+
+            renderQuestions();
+            scrollToTop(); 
+        }
+
+        function clearSearch() { document.getElementById('searchInput').value=""; document.getElementById('dropdownContainer').classList.add('hidden'); }
+        function closeSearchOutside(e) {
+            if(!document.getElementById('dropdownContainer').contains(e.target) && e.target.id!=='searchInput' && !e.target.closest('.clear-btn'))
+                document.getElementById('dropdownContainer').classList.add('hidden');
+        }
+
+        // YENİ: FIREBASE'E KAYDETME
+        function syncToCloud() {
+            const btnTop = document.getElementById('syncBtn');
+            const btnBottom = document.getElementById('bottomSyncBtn');
+            const originalHTMLTop = '<i class="fas fa-cloud-upload-alt text-sm"></i> <span>KAYDET</span>';
+            const originalHTMLBottom = '<i class="fas fa-cloud-upload-alt text-lg"></i> <span>KAYDET</span>';
+
+            if(btnTop) { btnTop.innerHTML = '<i class="fas fa-spinner fa-spin text-sm"></i> <span>...</span>'; btnTop.disabled = true; }
+            if(btnBottom) { btnBottom.innerHTML = '<i class="fas fa-spinner fa-spin text-lg"></i> <span>...</span>'; btnBottom.disabled = true; }
+
+            let currentSubjectScores = {};
+            students.forEach(s => { if(db[s] && db[s][activeSubject]) currentSubjectScores[s] = db[s][activeSubject]; });
+
+            fsDB.collection(activeClass).doc(activeSubject).set({
+                students: students,
+                scores: currentSubjectScores
+            }).then(() => {
+                const successHTMLTop = '<i class="fas fa-check-circle text-green-300 text-lg"></i> <span class="text-green-50">KAYDEDİLDİ</span>';
+                const successHTMLBottom = '<i class="fas fa-check-circle text-green-300 text-lg"></i> <span class="text-green-50">KAYDEDİLDİ</span>';
+
+                if(btnTop) {
+                    btnTop.innerHTML = successHTMLTop;
+                    btnTop.classList.remove('bg-orange-600', 'border-orange-800', 'hover:bg-orange-700');
+                    btnTop.classList.add('bg-green-600', 'border-green-800', 'hover:bg-green-700');
+                }
+                if(btnBottom) {
+                    btnBottom.innerHTML = successHTMLBottom;
+                    btnBottom.classList.remove('bg-orange-600', 'border-orange-800', 'hover:bg-orange-700');
+                    btnBottom.classList.add('bg-green-600', 'border-green-800', 'hover:bg-green-700');
+                }
+
+                setTimeout(() => {
+                    if(btnTop) {
+                        btnTop.innerHTML = originalHTMLTop;
+                        btnTop.disabled = false;
+                        btnTop.classList.add('bg-orange-600', 'border-orange-800', 'hover:bg-orange-700');
+                        btnTop.classList.remove('bg-green-600', 'border-green-800', 'hover:bg-green-700');
+                    }
+                    if(btnBottom) {
+                        btnBottom.innerHTML = originalHTMLBottom;
+                        btnBottom.disabled = false;
+                        btnBottom.classList.add('bg-orange-600', 'border-orange-800', 'hover:bg-orange-700');
+                        btnBottom.classList.remove('bg-green-600', 'border-green-800', 'hover:bg-green-700');
+                    }
+                }, 2000);
+            }).catch((error) => {
+                if(btnTop) { btnTop.innerHTML = originalHTMLTop; btnTop.disabled = false; }
+                if(btnBottom) { btnBottom.innerHTML = originalHTMLBottom; btnBottom.disabled = false; }
+                alert("Hata: Buluta kaydedilemedi. " + error.message);
+            });
+        }
+
+        function scrollToTop() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function calculateSafeScore(data, q) {
+            let s = 0;
+            let rawVal = data[q.id];
+            if (q.type === 'multi') {
+                if(typeof rawVal === 'object' && rawVal !== null) {
+                    Object.values(rawVal).forEach(v => s += v);
+                } else if(typeof rawVal === 'number') {
+                    s = rawVal;
+                }
+            } else {
+                s = (typeof rawVal === 'number' ? rawVal : 0);
+            }
+            return s;
+        }
+
+        // YENİ: FIREBASE'DEN RAPOR İÇİN TÜM VERİLERİ ÇEKME
+        async function openClassReport() {
+            if(!activeClass) return alert("Sınıf seçiniz.");
+            document.getElementById('classReportModal').classList.remove('hidden');
+            document.getElementById('classReportModal').classList.add('flex');
+            const tbody = document.getElementById('classReportBody');
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center p-4 text-gray-500 font-bold"><i class="fas fa-spinner fa-spin"></i> Lütfen Bekleyiniz, Veriler Firebase\'den Çekiliyor...</td></tr>';
+            const subs = ['TR','MAT','FEN','SOS'];
+
+            let allStudentsSet = new Set(students);
+
+            try {
+                for(const s of subs) {
+                    const docRef = await fsDB.collection(activeClass).doc(s).get();
+                    if(docRef.exists) {
+                        const d = docRef.data();
+                        Object.keys(d.scores || {}).forEach(st => {
+                            if(!db[st]) db[st] = {};
+                            db[st][s] = d.scores[st];
+                            allStudentsSet.add(st);
+                        });
+                        if(d.students) d.students.forEach(st => allStudentsSet.add(st));
+                    }
+                }
+
+                let sortedStudents = Array.from(allStudentsSet).sort((a,b)=>a.localeCompare(b,'tr'));
+                tbody.innerHTML = "";
+
+                sortedStudents.forEach(s => {
+                    let total = 0;
+                    let html = `<td class="font-bold text-gray-700 text-left">${s}</td>`;
+                    subs.forEach(subj => {
+                        let sc = 0;
+                        const d = (db[s]&&db[s][subj])?db[s][subj]:{};
+                        questionsData[subj].forEach(q => { sc += calculateSafeScore(d, q); });
+                        total += sc;
+                        html += `<td class="text-center font-semibold text-slate-600">${sc}</td>`;
+                    });
+                    html += `<td class="text-center font-black bg-blue-50 text-blue-800">${total}</td>`;
+                    tbody.innerHTML += `<tr class="border-b hover:bg-slate-50 transition">${html}</tr>`;
+                });
+            } catch(e) {
+                console.error(e);
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-red-500 font-bold">Veri yüklenirken hata oluştu!</td></tr>';
+            }
+        }
+
+        function downloadClassTableExcel() {
+            const tbody = document.getElementById('classReportBody');
+            if(!tbody || tbody.innerHTML.includes('fa-spinner')) return alert("Lütfen verilerin yüklenmesini bekleyin.");
+
+            let allStudentsSet = new Set(students);
+            Object.keys(db).forEach(s => allStudentsSet.add(s));
+            let sortedStudents = Array.from(allStudentsSet).sort((a,b)=>a.localeCompare(b,'tr'));
+
+            const data = [];
+            data.push(['Öğrenci', 'TR', 'MAT', 'FEN', 'SOS', 'TOPLAM']);
+
+            sortedStudents.forEach(st => {
+                let total = 0;
+                const scores = ['TR','MAT','FEN','SOS'].map(s => {
+                    let sc = 0; const d = (db[st]&&db[st][s])?db[st][s]:{};
+                    questionsData[s].forEach(q=>{ sc += calculateSafeScore(d, q); });
+                    total+=sc; return sc;
+                });
+                data.push([st, ...scores, total]);
+            });
+
+            const ws = XLSX.utils.aoa_to_sheet(data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Sınıf Özeti");
+            XLSX.writeFile(wb, `${activeClass}_Sinif_Ozeti_Mart.xlsx`);
+        }
+
+        async function downloadClassTablePDF() {
+            const { jsPDF } = window.jspdf; const doc = new jsPDF(); const font = await getFont();
+            doc.addFileToVFS("Roboto.ttf", font); doc.addFont("Roboto.ttf", "Roboto", "normal"); doc.setFont("Roboto");
+            doc.setFontSize(14); doc.text(`${activeClass} Şubesi Genel Tablo - Mart 2026`, 14, 15);
+
+            let allStudentsSet = new Set(students);
+            Object.keys(db).forEach(s => allStudentsSet.add(s));
+            let sortedStudents = Array.from(allStudentsSet).sort((a,b)=>a.localeCompare(b,'tr'));
+
+            const head = [['Öğrenci', 'TR', 'MAT', 'FEN', 'SOS', 'TOP']];
+            const body = sortedStudents.map(st => {
+                let total = 0;
+                const scores = ['TR','MAT','FEN','SOS'].map(s => {
+                    let sc = 0; const d = (db[st]&&db[st][s])?db[st][s]:{};
+                    questionsData[s].forEach(q=>{ sc += calculateSafeScore(d, q); });
+                    total+=sc; return sc;
+                });
+                return [st, ...scores, total];
+            });
+            doc.autoTable({ head:head, body:body, startY:25, styles:{font:"Roboto", fontSize:9}, theme:'grid' });
+            doc.save(`${activeClass}_Sinif_Ozeti_Mart.pdf`);
+        }
+
+        async function getFont() { const r = await fetch('https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.66/fonts/Roboto/Roboto-Regular.ttf'); const b = await r.arrayBuffer(); return btoa(new Uint8Array(b).reduce((d, u) => d + String.fromCharCode(u), '')); }
+        function copyWa() { navigator.clipboard.writeText(document.getElementById("waText").value); alert("Kopyalandı!"); }
+        
+        function openEditModal() { 
+            document.getElementById('studentInput').value = students.join('\n'); 
+            document.getElementById('editModal').classList.remove('hidden'); 
+            document.getElementById('editModal').classList.add('flex'); 
+        }
+        
+        function saveStudentsLocal() { 
+            students = document.getElementById('studentInput').value.split('\n').map(x=>x.trim()).filter(x=>x); 
+            document.getElementById('editModal').classList.add('hidden'); 
+            syncToCloud(); // Listeyi kaydettiğinde hemen buluta göndersin
+            alert("Liste güncellendi ve Firebase'e aktarıldı."); 
+        }
+
+        async function downloadStudentCard() {
+            if(!currentStudent) return;
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ unit:'mm', format:'a4' });
+            const font = await getFont();
+            doc.addFileToVFS("Roboto.ttf", font);
+            doc.addFont("Roboto.ttf", "Roboto", "normal");
+            doc.addFont("Roboto.ttf", "Roboto", "bold");
+            doc.setFont("Roboto");
+
+            const subjectFullNames = { TR:'TÜRKÇE', MAT:'MATEMATİK', FEN:'FEN BİLİMLERİ', SOS:'SOSYAL BİLGİLER' };
+            const pageW = 210;
+
+            doc.setFillColor(30, 58, 138);
+            doc.rect(0, 0, pageW, 32, 'F');
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(15); doc.setFont("Roboto", "bold");
+            doc.text("MART 2026 DEĞERLENDİRME RAPORU", pageW / 2, 13, { align: 'center' });
+            doc.setFontSize(11); doc.setFont("Roboto", "normal");
+            doc.text(`${currentStudent}  —  ${activeClass} Şubesi  —  ${subjectFullNames[activeSubject]}`, pageW / 2, 24, { align: 'center' });
+
+            const data = (db[currentStudent] && db[currentStudent][activeSubject]) ? db[currentStudent][activeSubject] : {};
+            const questions = questionsData[activeSubject];
+            let totalScore = 0, totalMax = 0;
+
+            const tableRows = questions.map(q => {
+                const sc = calculateSafeScore(data, q);
+                const raw = data[q.id];
+                const touched = raw !== undefined && raw !== null && (typeof raw === 'number' ? true : Object.keys(raw).length > 0);
+                totalScore += sc; totalMax += q.max;
+
+                let altDetay = '';
+                if (q.type === 'multi' && touched && typeof raw === 'object' && raw !== null) {
+                    altDetay = q.parts.map((p, pi) => `${p.l}: ${raw[pi] !== undefined ? raw[pi] : '?'}/${p.v}`).join('\n');
+                } else {
+                    altDetay = q.desc.length > 90 ? q.desc.substring(0, 90) + '...' : q.desc;
+                }
+
+                return [
+                    { content: q.title, styles: { fontStyle: 'bold', fontSize: 8.5 } },
+                    { content: altDetay, styles: { fontSize: 7.5, textColor: [71, 85, 105] } }
+                ];
+            });
+
+            doc.autoTable({
+                startY: 38,
+                head: [[
+                    { content: 'Kazanım / Soru', styles: { halign: 'left' } },
+                    { content: 'Kazanım Açıklaması ve Alt Adımlar', styles: { halign: 'left' } }
+                ]],
+                body: tableRows,
+                margin: { left: 10, right: 10 },
+                headStyles: { fillColor: [51, 65, 85], textColor: 255, fontStyle: 'bold', fontSize: 8.5, font: 'Roboto' },
+                columnStyles: {
+                    0: { cellWidth: 68 },
+                    1: { cellWidth: 122 }
+                },
+                styles: { font: 'Roboto', overflow: 'linebreak', cellPadding: 2.5 },
+                alternateRowStyles: { fillColor: [248, 250, 252] }
+            });
+
+            const finalY = doc.lastAutoTable.finalY + 5;
+            const gPct = totalMax > 0 ? Math.round(totalScore / totalMax * 100) : 0;
+            const perfLabel = gPct >= 85 ? 'Çok İyi' : gPct >= 70 ? 'İyi' : gPct >= 50 ? 'Orta' : 'Geliştirilmeli';
+            doc.setFillColor(30, 58, 138);
+            doc.rect(10, finalY, 190, 13, 'F');
+            doc.setTextColor(255, 255, 255);
+            doc.setFont("Roboto", "bold"); doc.setFontSize(11);
+            doc.text(`GENEL DURUM: ${perfLabel}`, pageW / 2, finalY + 9, { align: 'center' });
+
+            doc.setFont("Roboto", "normal"); doc.setFontSize(8); doc.setTextColor(150, 150, 150);
+            doc.text('Öğretmen: ____________________        Veli: ____________________', pageW / 2, 285, { align: 'center' });
+
+            doc.save(`${currentStudent}_Mart2026_${activeSubject}_Rapor.pdf`);
+        }
+
+        async function downloadComprehensiveCard() {
+            if(!currentStudent) return;
+            const btn = event.currentTarget;
+            const old = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            btn.disabled = true;
+
+            try {
+                const subs = ['TR', 'MAT', 'FEN', 'SOS'];
+                const subjectFullNames = { TR:'TÜRKÇE', MAT:'MATEMATİK', FEN:'FEN BİLİMLERİ', SOS:'SOSYAL BİLGİLER' };
+                const subjectColors = { TR:[185,28,28], MAT:[29,78,216], FEN:[5,150,105], SOS:[161,98,7] };
+
+                // YENİ: Firebase'den tek tek dersleri çek
+                await Promise.all(subs.map(async s => {
+                    try {
+                        const docRef = await fsDB.collection(activeClass).doc(s).get();
+                        if (docRef.exists) {
+                            const d = docRef.data();
+                            Object.keys(d.scores || {}).forEach(st => {
+                                if (!db[st]) db[st] = {};
+                                db[st][s] = d.scores[st];
+                            });
+                        }
+                    } catch(err) { console.log(err); }
+                }));
+
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+                const font = await getFont();
+                doc.addFileToVFS("Roboto.ttf", font);
+                doc.addFont("Roboto.ttf", "Roboto", "normal");
+                doc.addFont("Roboto.ttf", "Roboto", "bold");
+                doc.setFont("Roboto");
+                const pageW = 210;
+
+                doc.setFillColor(15, 23, 42);
+                doc.rect(0, 0, pageW, 36, 'F');
+                doc.setTextColor(255, 255, 255);
+                doc.setFont("Roboto", "bold"); doc.setFontSize(16);
+                doc.text("MART 2026 KAPSAMLI GELİŞİM RAPORU", pageW / 2, 14, { align: 'center' });
+                doc.setFont("Roboto", "normal"); doc.setFontSize(11);
+                doc.text(`${currentStudent}  —  ${activeClass} Şubesi`, pageW / 2, 26, { align: 'center' });
+
+                let y = 44;
+                let grandTotal = 0, grandMax = 0;
+
+                for (const subj of subs) {
+                    const data = (db[currentStudent] && db[currentStudent][subj]) ? db[currentStudent][subj] : {};
+                    const questions = questionsData[subj];
+                    let subjTotal = 0, subjMax = 0;
+                    questions.forEach(q => { subjTotal += calculateSafeScore(data, q); subjMax += q.max; });
+                    grandTotal += subjTotal; grandMax += subjMax;
+                    const subjPct = subjMax > 0 ? Math.round(subjTotal / subjMax * 100) : 0;
+                    const perfLabel = subjPct >= 85 ? 'Çok İyi' : subjPct >= 70 ? 'İyi' : subjPct >= 50 ? 'Orta' : 'Geliştirilmeli';
+                    const [r, g, b] = subjectColors[subj];
+
+                    doc.setFillColor(r, g, b);
+                    doc.rect(10, y, 190, 9, 'F');
+                    doc.setTextColor(255, 255, 255);
+                    doc.setFont("Roboto", "bold"); doc.setFontSize(10);
+                    doc.text(subjectFullNames[subj], 14, y + 6.2);
+                    doc.text(perfLabel, pageW - 14, y + 6.2, { align: 'right' });
+                    y += 12;
+
+                    const tableRows = questions.map(q => {
+                        const sc = calculateSafeScore(data, q);
+                        const raw = data[q.id];
+                        const touched = raw !== undefined && raw !== null && (typeof raw === 'number' ? true : Object.keys(raw).length > 0);
+
+                        let altDetay = '';
+                        if (q.type === 'multi' && touched && typeof raw === 'object' && raw !== null) {
+                            altDetay = q.parts.map((p, pi) => `${p.l}: ${raw[pi] !== undefined ? raw[pi] : '?'}/${p.v}`).join('\n');
+                        } else {
+                            altDetay = q.desc.length > 80 ? q.desc.substring(0, 80) + '...' : q.desc;
+                        }
+
+                        return [
+                            { content: q.title, styles: { fontStyle: 'bold', fontSize: 7.5 } },
+                            { content: altDetay, styles: { fontSize: 7, textColor: [71, 85, 105] } }
+                        ];
+                    });
+
+                    doc.autoTable({
+                        startY: y,
+                        head: [[
+                            { content: 'Kazanım / Soru', styles: { halign: 'left' } },
+                            { content: 'Açıklama ve Alt Adımlar', styles: { halign: 'left' } }
+                        ]],
+                        body: tableRows,
+                        margin: { left: 10, right: 10 },
+                        headStyles: { fillColor: [r, g, b], textColor: 255, fontStyle: 'bold', fontSize: 7.5, font: 'Roboto', cellPadding: 2 },
+                        columnStyles: {
+                            0: { cellWidth: 65 },
+                            1: { cellWidth: 125 }
+                        },
+                        styles: { font: 'Roboto', overflow: 'linebreak', cellPadding: 2, fontSize: 7.5 },
+                        alternateRowStyles: { fillColor: [248, 250, 252] },
+                        didDrawPage: (d) => { y = d.cursor.y + 3; }
+                    });
+                    y = doc.lastAutoTable.finalY + 8;
+                    if (y > 268) { doc.addPage(); y = 15; }
+                }
+
+                if (y > 268) { doc.addPage(); y = 15; }
+                const gPct = grandMax > 0 ? Math.round(grandTotal / grandMax * 100) : 0;
+                const gPerf = gPct >= 85 ? 'Çok İyi' : gPct >= 70 ? 'İyi' : gPct >= 50 ? 'Orta' : 'Geliştirilmeli';
+                doc.setFillColor(15, 23, 42);
+                doc.rect(10, y, 190, 14, 'F');
+                doc.setTextColor(255, 255, 255);
+                doc.setFont("Roboto", "bold"); doc.setFontSize(12);
+                doc.text(`GENEL DEĞERLENDİRME: ${gPerf}`, pageW / 2, y + 9.5, { align: 'center' });
+
+                doc.setFont("Roboto", "normal"); doc.setFontSize(8); doc.setTextColor(150, 150, 150);
+                doc.text('Öğretmen İmzası: ____________________        Veli İmzası: ____________________', pageW / 2, 285, { align: 'center' });
+
+                doc.save(`${currentStudent}_Mart2026_Genel_Rapor.pdf`);
+            } catch (e) {
+                console.error(e);
+                alert("PDF oluşturulurken hata oluştu: " + e.message);
+            } finally {
+                btn.innerHTML = old;
+                btn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>
