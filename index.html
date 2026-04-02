@@ -74,7 +74,7 @@
 
         <div class="mt-10 flex gap-4">
             <button onclick="openDataModal()" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-6 rounded-xl flex items-center gap-2 transition border border-gray-500 shadow-lg hover:-translate-y-0.5">
-                <i class="fas fa-database"></i> JSON İçe Aktar (Toplu)
+                <i class="fas fa-file-import"></i> JSON İçe Aktar (Dosya Yükle)
             </button>
         </div>
 
@@ -107,7 +107,7 @@
                             <span id="mobileBadgeText">A</span>
                         </div>
 
-                        <button onclick="openDataModal()" class="bg-slate-700 text-white px-2.5 py-1.5 rounded-lg font-bold text-xs shadow-sm hover:bg-slate-800 flex items-center gap-1.5 transition active:scale-95"><i class="fas fa-database"></i></button>
+                        <button onclick="openDataModal()" class="bg-slate-700 text-white px-2.5 py-1.5 rounded-lg font-bold text-xs shadow-sm hover:bg-slate-800 flex items-center gap-1.5 transition active:scale-95" title="JSON Yükle"><i class="fas fa-file-import"></i></button>
 
                         <button onclick="openClassReport()" class="bg-teal-600 text-white px-2.5 py-1.5 rounded-lg font-bold text-xs shadow-sm hover:bg-teal-700 flex items-center gap-1.5 transition active:scale-95"><i class="fas fa-chart-bar"></i> <span class="hidden sm:inline">Özet</span></button>
                         <button onclick="openEditModal()" class="bg-slate-600 text-white px-2.5 py-1.5 rounded-lg font-bold text-xs shadow-sm hover:bg-slate-700 flex items-center gap-1.5 transition active:scale-95"><i class="fas fa-list"></i> <span class="hidden sm:inline">Liste</span></button>
@@ -164,21 +164,28 @@
     </div>
 
     <div id="dataModal" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-[80] backdrop-blur-sm">
-        <div class="bg-white p-8 rounded-3xl w-full max-w-2xl shadow-2xl max-h-[90vh] overflow-y-auto hide-scrollbar">
+        <div class="bg-white p-8 rounded-3xl w-full max-w-lg shadow-2xl">
             <div class="flex justify-between items-center mb-6">
-                <h3 class="font-black text-2xl text-slate-800"><i class="fas fa-magic text-purple-600 mr-2"></i> Akıllı JSON Aktarımı</h3>
+                <h3 class="font-black text-2xl text-slate-800"><i class="fas fa-file-import text-purple-600 mr-2"></i> Yedek Yükle</h3>
                 <button onclick="document.getElementById('dataModal').classList.add('hidden'); document.getElementById('dataModal').classList.remove('flex')" class="text-slate-400 hover:text-red-500 text-2xl transition"><i class="fas fa-times"></i></button>
             </div>
 
-            <div class="p-5 bg-purple-50 rounded-2xl border border-purple-100">
-                <p class="text-sm text-purple-800 mb-4 leading-relaxed">
-                    Sınıf veya ders seçmenize gerek yok! Elinizdeki <b>tüm veritabanı yedeğini</b> (veya sınıf yedeğini) aşağıdaki kutuya yapıştırın. Sistem veriyi otomatik analiz edip doğru sınıflara (A, B, C, D) ve derslere kendisi paylaştıracaktır.
+            <div class="p-6 bg-purple-50 rounded-2xl border border-purple-200 text-center">
+                <p class="text-sm text-purple-800 mb-6 leading-relaxed">
+                    PythonAnywhere'den indirdiğiniz <b>.json</b> uzantılı toplu yedek dosyanızı aşağıdan seçin. Sistem verileri otomatik analiz edip Firebase'e kaydedecektir.
                 </p>
 
-                <textarea id="jsonInput" class="w-full h-64 border-2 border-purple-200 p-4 rounded-xl text-xs bg-white focus:border-purple-500 focus:ring-0 outline-none resize-none font-mono text-slate-600" placeholder='{"A": {"students": ["Ahmet"], "scores": {"Ahmet": {"TR": {...}}}}, "B": {...}}'></textarea>
+                <input type="file" id="jsonFileInput" accept=".json" class="hidden" onchange="handleFileUpload(event)">
+                
+                <label for="jsonFileInput" class="cursor-pointer flex flex-col items-center justify-center w-full py-8 border-2 border-dashed border-purple-400 rounded-xl bg-white hover:bg-purple-100 transition text-purple-600 font-bold group">
+                    <i class="fas fa-cloud-upload-alt text-4xl mb-3 group-hover:-translate-y-1 transition"></i> 
+                    <span>Dosya Seçmek İçin Tıklayın</span>
+                </label>
 
-                <button onclick="smartImportJSON(event)" class="w-full mt-4 bg-purple-600 hover:bg-purple-700 text-white font-black py-4 rounded-xl shadow-lg transition transform active:scale-95 flex justify-center items-center gap-2">
-                    <i class="fas fa-robot text-lg"></i> OTOMATİK ANALİZ ET VE FİREBASE'E AKTAR
+                <p id="fileNameDisplay" class="mt-3 text-sm font-bold text-slate-600 h-5"></p>
+
+                <button onclick="smartImportFromFile()" id="importFileBtn" class="w-full mt-4 bg-purple-600 hover:bg-purple-700 text-white font-black py-4 rounded-xl shadow-lg transition transform active:scale-95 flex justify-center items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                    <i class="fas fa-robot text-lg"></i> FİREBASE'E AKTAR
                 </button>
             </div>
         </div>
@@ -331,29 +338,43 @@
             }
         }
 
-        // YENİ: AKILLI JSON AKTARICI
-        async function smartImportJSON(event) {
-            const btn = event.currentTarget;
+        // YENİ: DOSYA SEÇİMİ İLE JSON OKUMA VE AKTARMA
+        let uploadedJsonText = "";
+
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            document.getElementById('fileNameDisplay').innerText = "Seçilen dosya: " + file.name;
+            const btn = document.getElementById('importFileBtn');
+            btn.disabled = false;
+            btn.classList.remove('opacity-50', 'cursor-not-allowed');
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                uploadedJsonText = e.target.result;
+            };
+            reader.readAsText(file);
+        }
+
+        async function smartImportFromFile() {
+            const btn = document.getElementById('importFileBtn');
             const originalHtml = btn.innerHTML;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin text-lg"></i> ANALİZ EDİLİYOR...';
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin text-lg"></i> FİREBASE\'E AKTARILIYOR...';
             btn.disabled = true;
 
             try {
-                const rawText = document.getElementById('jsonInput').value.trim();
-                if(!rawText) throw new Error("Lütfen JSON verisini yapıştırın.");
+                if(!uploadedJsonText) throw new Error("Dosya içeriği okunamadı. Lütfen tekrar dosya seçin.");
                 
-                const data = JSON.parse(rawText);
+                const data = JSON.parse(uploadedJsonText);
                 let batch = fsDB.batch();
                 let classesFound = [];
                 const possibleClasses = ['A', 'B', 'C', 'D'];
 
-                // Veri yapısı {"A": {"students": [], "scores": {}}, "B": {...}} şeklinde mi kontrol et
                 for (const cls of possibleClasses) {
                     if (data[cls]) {
-                        // Eğer o sınıfa ait bir düğüm varsa, onu mercege alıp Firebase'e yollayalım
                         const ref = fsDB.collection("Sınıflar").doc(cls);
                         
-                        // Önce mevcut veriyi çekelim ki üstüne yazmayalım, birleştirelim
                         const existingDoc = await ref.get();
                         let masterData = existingDoc.exists ? existingDoc.data() : { students: [], scores: {} };
                         if(!masterData.students) masterData.students = [];
@@ -361,25 +382,20 @@
 
                         const newData = data[cls];
                         
-                        // Notları birleştir
                         Object.keys(newData.scores || {}).forEach(st => {
                             if(!masterData.scores[st]) masterData.scores[st] = {};
-                            // Yeni verideki dersleri eski veriye ekle
                             Object.keys(newData.scores[st]).forEach(subj => {
                                 masterData.scores[st][subj] = newData.scores[st][subj];
                             });
-                            // Öğrenci listede yoksa ekle
                             if(!masterData.students.includes(st)) masterData.students.push(st);
                         });
 
-                        // Listeyi birleştir
                         if (newData.students) {
                             newData.students.forEach(st => {
                                 if(!masterData.students.includes(st)) masterData.students.push(st);
                             });
                         }
 
-                        // Batch (toplu yazım) işlemine ekle
                         batch.set(ref, masterData);
                         classesFound.push(cls);
                     }
@@ -387,18 +403,24 @@
 
                 if (classesFound.length > 0) {
                     await batch.commit();
-                    alert(`✅ HARİKA! Sistem veriyi çözdü. ${classesFound.join(', ')} şubelerine ait veriler Firebase'e otomatik aktarıldı!`);
-                    document.getElementById('jsonInput').value = "";
+                    alert(`✅ HARİKA! Dosya başarıyla okundu. ${classesFound.join(', ')} şubelerine ait veriler Firebase'e aktarıldı!`);
                     document.getElementById('dataModal').classList.add('hidden');
+                    
+                    // Reset inputs
+                    document.getElementById('jsonFileInput').value = "";
+                    uploadedJsonText = "";
+                    document.getElementById('fileNameDisplay').innerText = "";
+                    btn.disabled = true;
+                    btn.classList.add('opacity-50', 'cursor-not-allowed');
+
                 } else {
-                    alert("⚠️ JSON formatı tam anlaşılamadı. Lütfen PythonAnywhere'deki 'Tüm Sınıflar' (A, B, C, D düğümlerini içeren) yedeğinizi tam olarak kopyaladığınızdan emin olun.");
+                    alert("⚠️ JSON dosyası okundu fakat içinde 'A', 'B', 'C' veya 'D' şubelerine ait bir veri bulunamadı. Doğru yedeği seçtiğinize emin olun.");
                 }
 
             } catch(e) { 
-                alert("HATA: JSON geçerli değil! Lütfen kopyaladığınız metinde eksik parantez olmadığından emin olun. " + e.message); 
+                alert("HATA: Seçilen dosya geçerli bir JSON formatında değil! " + e.message); 
             } finally {
                 btn.innerHTML = originalHtml;
-                btn.disabled = false;
             }
         }
 
