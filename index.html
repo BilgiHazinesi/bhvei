@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hızlı Değerlendirme Pro - Merkezi Liste</title>
+    <title>Hızlı Değerlendirme Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
@@ -15,14 +15,18 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; transition: background-color 0.4s ease; }
-        .sticky-nav { position: sticky; top: 0; z-index: 60; background: white; box-shadow: 0 2px 15px -3px rgba(0,0,0,0.1); }
-        .class-tab { font-weight: 800; font-size: 0.85rem; color: #64748b; border-radius: 0.5rem; transition: all 0.2s; }
-        .class-tab:hover { background-color: #e2e8f0; color: #334155; }
-        .class-tab.active { background-color: #1e293b; color: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+
+        /* ESKİ SEVİLEN ÜST MENÜ */
+        .sticky-nav { position: sticky; top: 0; z-index: 60; background: white; box-shadow: 0 2px 10px -3px rgba(0,0,0,0.1); }
+        .class-badge { background: #1e293b; color: white; padding: 0.3rem 0.8rem; border-radius: 6px; font-weight: 800; font-size: 0.95rem; display: flex; align-items: center; gap: 0.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); white-space: nowrap; border: 1px solid #334155; cursor: pointer; transition: all 0.2s;}
+        .class-badge:hover { background: #334155; transform: scale(1.02); }
+
         .tab-btn { color: #64748b; border-bottom: 3px solid transparent; font-size: 0.9rem; font-weight: 800; transition: all 0.2s; }
         .tab-btn:hover { background-color: #f8fafc; color: #334155; }
         .tab-btn.active { border-bottom: 3px solid #2563eb; color: #1d4ed8; background: #eff6ff; }
-        .sticky-student-header { position: sticky; top: 110px; z-index: 40; padding-top: 5px; padding-bottom: 5px; }
+
+        .sticky-student-header { position: sticky; top: 86px; z-index: 40; padding-top: 5px; padding-bottom: 5px; }
+
         .action-btn { display: flex; align-items: center; justify-content: center; font-weight: 800; border-radius: 8px; transition: all 0.1s; border: 2px solid transparent; height: 50px; box-shadow: 0 2px 3px rgba(0,0,0,0.05); font-size: 1rem; }
         .action-btn:active { transform: scale(0.96); }
         .score-strip { display: flex; width: 100%; gap: 6px; margin-top: 8px; }
@@ -30,10 +34,14 @@
         .strip-btn:hover { background: #e2e8f0; color: #0f172a; }
         .strip-btn.active { background-color: #2563eb; color: white; border-color: #1d4ed8; box-shadow: 0 2px 4px rgba(37, 99, 235, 0.3); font-size: 1.1rem; }
         .multi-part-row { background: #e2e8f0; padding: 12px; border-radius: 10px; margin-bottom: 12px; border: 1px solid #cbd5e1; }
+        
+        /* ESKİ SEVİLEN GİRİŞ EKRANI */
         #login-screen { position: fixed; top:0; left:0; width:100%; height:100%; background: #0f172a; z-index: 999; }
+        
         .summary-table th { background: #f8fafc; padding: 10px; border-bottom: 2px solid #e2e8f0; font-size: 0.85rem; text-transform: uppercase; }
         .summary-table td { padding: 10px; border-bottom: 1px solid #f1f5f9; text-align: center; font-weight: 500; }
         .summary-table tr:hover { background-color: #f1f5f9; }
+
         .clear-btn { position: absolute; right: 0; top: 0; bottom: 0; width: 40px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; color: #ef4444; cursor: pointer; z-index: 20; }
         .clear-btn:hover { background-color: #fee2e2; border-top-right-radius: 0.5rem; border-bottom-right-radius: 0.5rem; }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
@@ -43,92 +51,100 @@
 <body class="pb-20" style="background-color: #fef2f2;" onclick="closeSearchOutside(event)">
 
     <div id="login-screen" class="flex flex-col items-center justify-center text-white relative">
-        <div class="absolute top-4 right-4">
-            <button onclick="openDataModal()" class="bg-gray-800 hover:bg-gray-700 text-slate-300 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition border border-gray-700">
-                <i class="fas fa-database"></i> Eski Veriyi Aktar
+        <h2 class="text-5xl font-black mb-12 tracking-tight">Sınıf Seçimi</h2>
+        
+        <div class="grid grid-cols-2 gap-8 w-full max-w-lg px-6">
+            <button onclick="bootClass('A')" class="aspect-square bg-white text-slate-900 rounded-3xl text-5xl font-black hover:bg-blue-50 hover:scale-105 transition shadow-2xl border-4 border-transparent hover:border-blue-500 flex flex-col items-center justify-center relative">
+                A
+                <span class="absolute bottom-4 text-xs font-bold text-slate-400">Şubesi</span>
+            </button>
+            <button onclick="bootClass('B')" class="aspect-square bg-white text-slate-900 rounded-3xl text-5xl font-black hover:bg-blue-50 hover:scale-105 transition shadow-2xl border-4 border-transparent hover:border-blue-500 flex flex-col items-center justify-center relative">
+                B
+                <span class="absolute bottom-4 text-xs font-bold text-slate-400">Şubesi</span>
+            </button>
+            <button onclick="bootClass('C')" class="aspect-square bg-white text-slate-900 rounded-3xl text-5xl font-black hover:bg-blue-50 hover:scale-105 transition shadow-2xl border-4 border-transparent hover:border-blue-500 flex flex-col items-center justify-center relative">
+                C
+                <span class="absolute bottom-4 text-xs font-bold text-slate-400">Şubesi</span>
+            </button>
+            <button onclick="bootClass('D')" class="aspect-square bg-white text-slate-900 rounded-3xl text-5xl font-black hover:bg-blue-50 hover:scale-105 transition shadow-2xl border-4 border-transparent hover:border-blue-500 flex flex-col items-center justify-center relative">
+                D
+                <span class="absolute bottom-4 text-xs font-bold text-slate-400">Şubesi</span>
             </button>
         </div>
 
-        <div class="bg-blue-500/20 p-8 rounded-full mb-8 border-4 border-blue-500/30">
-            <i class="fas fa-bolt text-7xl text-blue-400"></i>
+        <div class="mt-10 flex gap-4">
+            <button onclick="openDataModal()" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-6 rounded-xl flex items-center gap-2 transition border border-gray-500 shadow-lg hover:-translate-y-0.5">
+                <i class="fas fa-database"></i> JSON İçe Aktar (Toplu)
+            </button>
         </div>
-        <h2 class="text-4xl md:text-5xl font-black mb-4 tracking-tight text-center">Hızlı Değerlendirme Pro</h2>
-        <p class="text-slate-400 mb-12 text-center max-w-md">Tüm şube ve ders verileri merkezi liste üzerinden senkronize ediliyor.</p>
-        
-        <button id="bootBtn" onclick="bootSystem()" class="bg-blue-600 hover:bg-blue-500 text-white text-2xl font-black py-5 px-12 rounded-3xl shadow-[0_10px_40px_rgba(37,99,235,0.4)] transition transform hover:scale-105 hover:-translate-y-1 flex items-center gap-4">
-            <i class="fas fa-power-off"></i> SİSTEMİ BAŞLAT
-        </button>
 
         <div id="bootSpinner" class="hidden flex-col items-center mt-8">
-            <i class="fas fa-circle-notch fa-spin text-5xl text-blue-400 mb-4"></i>
-            <p class="text-blue-300 font-bold animate-pulse">Merkezi veriler yükleniyor...</p>
+            <i class="fas fa-circle-notch fa-spin text-4xl text-blue-400 mb-3"></i>
+            <p class="text-blue-300 font-bold animate-pulse" id="spinnerText">Firebase'e Bağlanıyor...</p>
         </div>
     </div>
 
     <div id="app-content" style="display:none;">
         <div class="sticky-nav">
-            <div class="max-w-7xl mx-auto px-4 pt-3 pb-2 flex flex-col md:flex-row justify-between items-center gap-3">
-                <div class="relative w-full md:max-w-md lg:max-w-lg">
-                    <div class="relative h-11"> 
-                        <input type="text" id="searchInput" class="w-full h-full pl-10 pr-10 border-2 border-slate-300 rounded-xl bg-slate-50 focus:bg-white focus:border-blue-600 focus:ring-0 font-bold text-sm outline-none shadow-inner transition" placeholder="Öğrenci Ara..." oninput="filterStudents()" onfocus="filterStudents()" autocomplete="off">
-                        <i class="fas fa-search absolute left-3.5 top-1/2 transform -translate-y-1/2 text-slate-400"></i>
-                        <div class="clear-btn" onclick="clearSearch()">
-                            <i class="fas fa-times"></i>
-                        </div>
+            <div class="max-w-7xl mx-auto px-4">
+                <div class="flex flex-col md:flex-row gap-2 items-center justify-between mb-1 pt-2">
+                    
+                    <div id="classBadgeDisplay" onclick="showLoginScreen()" title="Şube Değiştir" class="class-badge hidden md:flex min-w-[100px] justify-center">
+                        <span id="badgeText">A Şubesi</span> <i class="fas fa-exchange-alt text-xs opacity-70 ml-1"></i>
                     </div>
-                    <ul id="dropdownContainer" class="hidden absolute w-full bg-white mt-1 rounded-xl shadow-2xl border border-slate-200 z-[100] max-h-60 overflow-y-auto"><ul id="searchResults" class="divide-y divide-slate-100 text-sm"></ul></ul>
+
+                    <div class="relative w-full md:max-w-md lg:max-w-lg">
+                        <div class="relative h-10"> 
+                            <input type="text" id="searchInput" class="w-full h-full pl-9 pr-10 border-2 border-slate-300 rounded-lg bg-white focus:border-blue-600 focus:ring-0 font-bold text-sm outline-none shadow-sm transition" placeholder="Öğrenci Ara..." oninput="filterStudents()" onfocus="filterStudents()" autocomplete="off">
+                            <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 text-sm"></i>
+                            <div class="clear-btn" onclick="clearSearch()"><i class="fas fa-times"></i></div>
+                        </div>
+                        <ul id="dropdownContainer" class="hidden absolute w-full bg-white mt-1 rounded-lg shadow-xl border border-slate-200 z-[100] max-h-60 overflow-y-auto"><ul id="searchResults" class="divide-y divide-slate-100 text-sm"></ul></ul>
+                    </div>
+
+                    <div class="flex gap-1.5 w-full md:w-auto justify-end">
+                        <div id="mobileClassBadge" onclick="showLoginScreen()" title="Şube Değiştir" class="class-badge md:hidden text-xs px-2 py-1 mr-auto">
+                            <span id="mobileBadgeText">A</span>
+                        </div>
+
+                        <button onclick="openDataModal()" class="bg-slate-700 text-white px-2.5 py-1.5 rounded-lg font-bold text-xs shadow-sm hover:bg-slate-800 flex items-center gap-1.5 transition active:scale-95"><i class="fas fa-database"></i></button>
+
+                        <button onclick="openClassReport()" class="bg-teal-600 text-white px-2.5 py-1.5 rounded-lg font-bold text-xs shadow-sm hover:bg-teal-700 flex items-center gap-1.5 transition active:scale-95"><i class="fas fa-chart-bar"></i> <span class="hidden sm:inline">Özet</span></button>
+                        <button onclick="openEditModal()" class="bg-slate-600 text-white px-2.5 py-1.5 rounded-lg font-bold text-xs shadow-sm hover:bg-slate-700 flex items-center gap-1.5 transition active:scale-95"><i class="fas fa-list"></i> <span class="hidden sm:inline">Liste</span></button>
+
+                        <button onclick="syncToCloud()" id="syncBtn" class="flex-1 md:flex-none justify-center bg-orange-600 text-white px-4 py-1.5 rounded-lg font-black text-xs shadow-sm hover:bg-orange-700 flex items-center gap-1.5 transition active:scale-95 border-b-2 border-orange-800 active:border-b-0 active:translate-y-0.5">
+                            <i class="fas fa-cloud-upload-alt text-sm"></i> KAYDET
+                        </button>
+                    </div>
                 </div>
 
-                <div class="flex gap-2 w-full md:w-auto justify-end">
-                    <button onclick="openDataModal()" class="bg-slate-700 text-white px-3 py-2 rounded-xl font-bold text-xs md:text-sm shadow-sm hover:bg-slate-800 flex items-center gap-2 transition active:scale-95" title="Eski Veriyi Aktar"><i class="fas fa-database"></i></button>
-
-                    <button onclick="openClassReport()" class="bg-teal-600 text-white px-3 py-2 rounded-xl font-bold text-xs md:text-sm shadow-sm hover:bg-teal-700 flex items-center gap-2 transition active:scale-95"><i class="fas fa-chart-bar"></i> Sınıf Özeti</button>
-                    <button onclick="openEditModal()" class="bg-slate-600 text-white px-3 py-2 rounded-xl font-bold text-xs md:text-sm shadow-sm hover:bg-slate-700 flex items-center gap-2 transition active:scale-95"><i class="fas fa-users"></i> Liste Düzenle</button>
-                    <button onclick="syncToCloud()" id="syncBtn" class="flex-1 md:flex-none justify-center bg-orange-600 text-white px-5 py-2 rounded-xl font-black text-xs md:text-sm shadow-sm hover:bg-orange-700 flex items-center gap-2 transition active:scale-95 border-b-2 border-orange-800 active:border-b-0 active:translate-y-0.5">
-                        <i class="fas fa-cloud-upload-alt"></i> KAYDET
-                    </button>
-                </div>
-            </div>
-
-            <div class="max-w-7xl mx-auto px-4 mt-1">
-                <div class="flex bg-slate-100 p-1 rounded-t-xl gap-1">
-                    <button id="class-tab-A" class="class-tab flex-1 py-2 active" onclick="switchClass('A')">A ŞUBESİ</button>
-                    <button id="class-tab-B" class="class-tab flex-1 py-2" onclick="switchClass('B')">B ŞUBESİ</button>
-                    <button id="class-tab-C" class="class-tab flex-1 py-2" onclick="switchClass('C')">C ŞUBESİ</button>
-                    <button id="class-tab-D" class="class-tab flex-1 py-2" onclick="switchClass('D')">D ŞUBESİ</button>
-                </div>
-                <div class="flex border-b-2 border-slate-100 bg-white">
-                    <button id="tab-TR" class="tab-btn flex-1 py-2.5 active" onclick="switchTab('TR')">TÜRKÇE</button>
-                    <button id="tab-MAT" class="tab-btn flex-1 py-2.5" onclick="switchTab('MAT')">MATEMATİK</button>
-                    <button id="tab-FEN" class="tab-btn flex-1 py-2.5" onclick="switchTab('FEN')">FEN BİL.</button>
-                    <button id="tab-SOS" class="tab-btn flex-1 py-2.5" onclick="switchTab('SOS')">SOSYAL</button>
+                <div class="flex space-x-1 border-b border-slate-200 mt-2">
+                    <button id="tab-TR" class="tab-btn flex-1 py-2 text-center transition-colors active" onclick="switchTab('TR')">TÜRKÇE</button>
+                    <button id="tab-MAT" class="tab-btn flex-1 py-2 text-center transition-colors" onclick="switchTab('MAT')">MATEMATİK</button>
+                    <button id="tab-FEN" class="tab-btn flex-1 py-2 text-center transition-colors" onclick="switchTab('FEN')">FEN BİL.</button>
+                    <button id="tab-SOS" class="tab-btn flex-1 py-2 text-center transition-colors" onclick="switchTab('SOS')">SOSYAL</button>
                 </div>
             </div>
         </div>
 
-        <div id="quickNav" class="fixed left-2 md:left-6 top-1/2 transform -translate-y-1/2 z-50 flex-col gap-2 bg-white/90 p-2 py-3 rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.12)] backdrop-blur-md border border-slate-100 hidden max-h-[85vh] overflow-y-auto hide-scrollbar">
-        </div>
+        <div id="quickNav" class="fixed left-2 md:left-6 top-1/2 transform -translate-y-1/2 z-50 flex-col gap-2 bg-white/90 p-2 py-3 rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.12)] backdrop-blur-md border border-slate-100 hidden max-h-[85vh] overflow-y-auto hide-scrollbar"></div>
 
         <div class="max-w-5xl mx-auto px-2 pl-14 md:pl-20 pr-2 md:pr-4" id="mainContent" style="display:none;">
             <div class="sticky-student-header">
-                <div class="bg-white/95 backdrop-blur-sm px-4 py-2.5 rounded-2xl shadow-sm border border-slate-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                    <div class="flex items-center gap-3 overflow-hidden w-full sm:w-auto">
-                        <div class="bg-blue-100 w-10 h-10 rounded-full flex items-center justify-center text-blue-600 shrink-0 shadow-inner">
-                            <i class="fas fa-user-graduate text-lg"></i>
-                        </div>
-                        <div class="flex flex-col truncate">
-                            <h2 id="studentNameDisplay" class="text-xl font-black text-slate-800 truncate"></h2>
-                            <span id="studentClassDisplay" class="text-xs font-bold text-slate-500 uppercase tracking-wider">A Şubesi - Mart 2026 Değ.</span>
+                <div class="bg-white/95 backdrop-blur-sm px-4 py-2.5 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between gap-2">
+                    <div class="flex items-center gap-2 overflow-hidden">
+                        <div class="bg-blue-50 w-8 h-8 rounded-full flex items-center justify-center text-blue-600 shrink-0"><i class="fas fa-user-graduate text-sm"></i></div>
+                        <div class="flex items-baseline gap-2 truncate">
+                            <h2 id="studentNameDisplay" class="text-lg font-black text-slate-800 truncate"></h2>
+                            <span class="text-xs font-bold text-slate-400 hidden sm:inline shrink-0">Mart 2026 Değ.</span>
                         </div>
                     </div>
-                    <div class="flex items-center gap-1.5 shrink-0 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
-                        <button onclick="markAllFull()" class="bg-emerald-500 text-white px-3 py-2 rounded-xl shadow-sm hover:bg-emerald-600 font-bold text-xs flex items-center gap-1.5 transition active:scale-95 shrink-0">
-                            <i class="fas fa-check-double"></i> TAMLA
-                        </button>
-                        <div class="w-px h-6 bg-slate-200 mx-1 hidden sm:block"></div>
-                        <button onclick="downloadStudentCard()" class="text-purple-600 bg-purple-50 hover:bg-purple-100 px-3 py-2 rounded-xl border border-purple-100 font-bold text-xs transition flex items-center gap-1.5 shrink-0"><i class="fas fa-file-pdf"></i> Tek Karne</button>
-                        <button onclick="downloadComprehensiveCard()" class="text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-3 py-2 rounded-xl border border-indigo-100 font-bold text-xs transition flex items-center gap-1.5 shrink-0"><i class="fas fa-layer-group"></i> Genel</button>
-                        <button onclick="openWhatsappModal()" class="text-green-600 bg-green-50 hover:bg-green-100 px-3 py-2 rounded-xl border border-green-100 font-bold text-xs transition flex items-center gap-1.5 shrink-0"><i class="fab fa-whatsapp text-sm"></i> Mesaj</button>
+                    <div class="flex items-center gap-1.5 shrink-0">
+                        <button onclick="markAllFull()" class="bg-emerald-500 text-white px-3 py-1.5 rounded-lg shadow-sm hover:bg-emerald-600 font-bold text-xs flex items-center gap-1.5 transition active:scale-95"><i class="fas fa-check-double"></i> <span class="hidden md:inline">TAMLA</span></button>
+                        <div class="w-px h-5 bg-slate-200 mx-1"></div>
+                        <button onclick="downloadStudentCard()" class="text-purple-600 bg-purple-50 hover:bg-purple-100 px-2.5 py-1.5 rounded-lg border border-purple-100 font-bold text-xs transition flex items-center gap-1.5"><i class="fas fa-file-pdf"></i> <span class="hidden lg:inline">Tek</span></button>
+                        <button onclick="downloadComprehensiveCard()" class="text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1.5 rounded-lg border border-indigo-100 font-bold text-xs transition flex items-center gap-1.5"><i class="fas fa-layer-group"></i> <span class="hidden lg:inline">Genel</span></button>
+                        <button onclick="openWhatsappModal()" class="text-green-600 bg-green-50 hover:bg-green-100 px-2.5 py-1.5 rounded-lg border border-green-100 font-bold text-xs transition flex items-center gap-1.5"><i class="fab fa-whatsapp text-sm"></i> <span class="hidden lg:inline">Mesaj</span></button>
                     </div>
                 </div>
             </div>
@@ -148,41 +164,23 @@
     </div>
 
     <div id="dataModal" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-[80] backdrop-blur-sm">
-        <div class="bg-white p-8 rounded-3xl w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto hide-scrollbar">
+        <div class="bg-white p-8 rounded-3xl w-full max-w-2xl shadow-2xl max-h-[90vh] overflow-y-auto hide-scrollbar">
             <div class="flex justify-between items-center mb-6">
-                <h3 class="font-black text-2xl text-slate-800">Eski Veri Taşıma</h3>
+                <h3 class="font-black text-2xl text-slate-800"><i class="fas fa-magic text-purple-600 mr-2"></i> Akıllı JSON Aktarımı</h3>
                 <button onclick="document.getElementById('dataModal').classList.add('hidden'); document.getElementById('dataModal').classList.remove('flex')" class="text-slate-400 hover:text-red-500 text-2xl transition"><i class="fas fa-times"></i></button>
             </div>
 
-            <div class="p-5 bg-orange-50 rounded-2xl border border-orange-100">
-                <h4 class="font-bold text-orange-800 mb-2 flex items-center gap-2"><i class="fas fa-file-import"></i> JSON Yapıştır & Aktar</h4>
-                <p class="text-sm text-orange-700 mb-4 leading-relaxed">Eski PythonAnywhere sisteminden aldığınız JSON içeriğini buraya yapıştırıp yeni merkezi sisteme ekleyebilirsiniz.</p>
+            <div class="p-5 bg-purple-50 rounded-2xl border border-purple-100">
+                <p class="text-sm text-purple-800 mb-4 leading-relaxed">
+                    Sınıf veya ders seçmenize gerek yok! Elinizdeki <b>tüm veritabanı yedeğini</b> (veya sınıf yedeğini) aşağıdaki kutuya yapıştırın. Sistem veriyi otomatik analiz edip doğru sınıflara (A, B, C, D) ve derslere kendisi paylaştıracaktır.
+                </p>
 
-                <div class="flex gap-2 mb-3">
-                    <select id="jsonClass" class="p-2.5 border border-orange-200 rounded-lg w-1/2 text-sm font-bold bg-white text-orange-900 outline-none">
-                        <option value="A">A Şubesi</option>
-                        <option value="B">B Şubesi</option>
-                        <option value="C">C Şubesi</option>
-                        <option value="D">D Şubesi</option>
-                    </select>
-                    <select id="jsonSubject" class="p-2.5 border border-orange-200 rounded-lg w-1/2 text-sm font-bold bg-white text-orange-900 outline-none">
-                        <option value="TR">Türkçe</option>
-                        <option value="MAT">Matematik</option>
-                        <option value="FEN">Fen Bil.</option>
-                        <option value="SOS">Sosyal Bil.</option>
-                    </select>
-                </div>
+                <textarea id="jsonInput" class="w-full h-64 border-2 border-purple-200 p-4 rounded-xl text-xs bg-white focus:border-purple-500 focus:ring-0 outline-none resize-none font-mono text-slate-600" placeholder='{"A": {"students": ["Ahmet"], "scores": {"Ahmet": {"TR": {...}}}}, "B": {...}}'></textarea>
 
-                <textarea id="jsonInput" class="w-full h-40 border-2 border-orange-200 p-3 rounded-xl text-xs bg-white focus:border-orange-500 focus:ring-0 outline-none resize-none font-mono text-slate-600" placeholder='{"status":"success", "students": ["Ahmet"], "scores": {"Ahmet": {"t1": 12}}}'></textarea>
-
-                <button onclick="saveManualJSON(event)" class="w-full mt-4 bg-orange-600 hover:bg-orange-500 text-white font-black py-4 rounded-xl shadow-lg transition transform active:scale-95 flex justify-center items-center gap-2">
-                    <i class="fas fa-upload text-lg"></i> FİREBASE'E AKTAR
+                <button onclick="smartImportJSON(event)" class="w-full mt-4 bg-purple-600 hover:bg-purple-700 text-white font-black py-4 rounded-xl shadow-lg transition transform active:scale-95 flex justify-center items-center gap-2">
+                    <i class="fas fa-robot text-lg"></i> OTOMATİK ANALİZ ET VE FİREBASE'E AKTAR
                 </button>
             </div>
-            
-            <button onclick="document.getElementById('dataModal').classList.add('hidden'); document.getElementById('dataModal').classList.remove('flex')" class="mt-6 w-full bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-3 rounded-xl transition">
-                Kapat
-            </button>
         </div>
     </div>
 
@@ -225,22 +223,12 @@
         const fsDB = firebase.firestore();
 
         // MERKEZİ VERİ YAPISI
-        let classMasterData = { 
-            'A': { students: [], scores: {} }, 
-            'B': { students: [], scores: {} }, 
-            'C': { students: [], scores: {} }, 
-            'D': { students: [], scores: {} } 
-        };
+        let classMasterData = { students: [], scores: {} }; 
         let activeClass = "A";
         let activeSubject = "TR";
         let currentStudent = null;
 
-        const themeColors = {
-            'TR': '#fef2f2',  
-            'MAT': '#eff6ff', 
-            'FEN': '#f0fdf4', 
-            'SOS': '#fffbeb'  
-        };
+        const themeColors = { 'TR': '#fef2f2', 'MAT': '#eff6ff', 'FEN': '#f0fdf4', 'SOS': '#fffbeb' };
 
         const questionsData = {
             TR: [
@@ -302,127 +290,119 @@
             autoSyncTimer = setTimeout(() => { syncToCloud(); }, 1500); 
         }
 
-        // 1. TÜM OKULU BAŞLATMA (MERKEZİ YAPI)
-        async function bootSystem() {
-            const btn = document.getElementById('bootBtn');
+        // ESKİ TİP SINIF YÜKLEME (TIKLANDIĞINDA YÜKLER)
+        async function bootClass(cls) {
             const spinner = document.getElementById('bootSpinner');
-            btn.style.display = 'none';
             spinner.classList.remove('hidden');
             spinner.classList.add('flex');
-
-            const classes = ['A', 'B', 'C', 'D'];
-
+            
+            activeClass = cls;
+            
             try {
-                // Firebase'den her şube için tek bir döküman çekiyoruz
-                const promises = classes.map(c => 
-                    fsDB.collection("Sınıflar").doc(c).get().then(doc => {
-                        if (doc.exists) {
-                            classMasterData[c] = doc.data();
-                            if(!classMasterData[c].students) classMasterData[c].students = [];
-                            if(!classMasterData[c].scores) classMasterData[c].scores = {};
-                        } else {
-                            classMasterData[c] = { students: [], scores: {} };
-                        }
-                    })
-                );
-                
-                await Promise.all(promises);
+                const docRef = await fsDB.collection("Sınıflar").doc(cls).get();
+                if (docRef.exists) {
+                    classMasterData = docRef.data();
+                    if(!classMasterData.students) classMasterData.students = [];
+                    if(!classMasterData.scores) classMasterData.scores = {};
+                } else {
+                    classMasterData = { students: [], scores: {} };
+                }
+
+                document.getElementById('badgeText').innerText = `${cls} Şubesi`;
+                document.getElementById('mobileBadgeText').innerText = cls;
 
                 document.getElementById('login-screen').style.display = 'none';
                 document.getElementById('app-content').style.display = 'block';
-                switchClass('A');
+                
+                currentStudent = null;
+                document.getElementById('searchInput').value = "";
+                document.getElementById('startMessage').style.display = 'flex';
+                document.getElementById('mainContent').style.display = 'none';
+                document.getElementById('quickNav').classList.add('hidden');
+                
                 switchTab('TR');
 
             } catch (e) {
                 console.error(e);
                 alert("Veriler çekilirken hata oluştu. İnterneti kontrol edin.");
-                btn.style.display = 'flex';
+            } finally {
                 spinner.classList.add('hidden');
                 spinner.classList.remove('flex');
             }
         }
 
-        // 2. ESKİ PYTHONANYWHERE VERİSİNİ MERKEZİ SİSTEME AKTARMA FONKSİYONU
-        async function saveManualJSON(event) {
+        // YENİ: AKILLI JSON AKTARICI
+        async function smartImportJSON(event) {
             const btn = event.currentTarget;
             const originalHtml = btn.innerHTML;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin text-lg"></i> AKTARILIYOR...';
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin text-lg"></i> ANALİZ EDİLİYOR...';
             btn.disabled = true;
 
             try {
                 const rawText = document.getElementById('jsonInput').value.trim();
-                if(!rawText) throw new Error("Lütfen JSON verisi yapıştırın.");
+                if(!rawText) throw new Error("Lütfen JSON verisini yapıştırın.");
                 
                 const data = JSON.parse(rawText);
-                const cls = document.getElementById('jsonClass').value;
-                const subj = document.getElementById('jsonSubject').value;
+                let batch = fsDB.batch();
+                let classesFound = [];
+                const possibleClasses = ['A', 'B', 'C', 'D'];
 
-                // Firebase'den güncel master datayı alıyoruz (üzerine yazmamak için)
-                let classDoc = await fsDB.collection("Sınıflar").doc(cls).get();
-                let masterData = classDoc.exists ? classDoc.data() : { students: [], scores: {} };
-                
-                if(!masterData.students) masterData.students = [];
-                if(!masterData.scores) masterData.scores = {};
+                // Veri yapısı {"A": {"students": [], "scores": {}}, "B": {...}} şeklinde mi kontrol et
+                for (const cls of possibleClasses) {
+                    if (data[cls]) {
+                        // Eğer o sınıfa ait bir düğüm varsa, onu mercege alıp Firebase'e yollayalım
+                        const ref = fsDB.collection("Sınıflar").doc(cls);
+                        
+                        // Önce mevcut veriyi çekelim ki üstüne yazmayalım, birleştirelim
+                        const existingDoc = await ref.get();
+                        let masterData = existingDoc.exists ? existingDoc.data() : { students: [], scores: {} };
+                        if(!masterData.students) masterData.students = [];
+                        if(!masterData.scores) masterData.scores = {};
 
-                // Eski notları master dataya akıllıca birleştir (merge)
-                Object.keys(data.scores || {}).forEach(st => {
-                    if(!masterData.scores[st]) masterData.scores[st] = {};
-                    masterData.scores[st][subj] = data.scores[st];
-                    
-                    // Öğrenci ana listede yoksa ekle
-                    if(!masterData.students.includes(st)) masterData.students.push(st);
-                });
+                        const newData = data[cls];
+                        
+                        // Notları birleştir
+                        Object.keys(newData.scores || {}).forEach(st => {
+                            if(!masterData.scores[st]) masterData.scores[st] = {};
+                            // Yeni verideki dersleri eski veriye ekle
+                            Object.keys(newData.scores[st]).forEach(subj => {
+                                masterData.scores[st][subj] = newData.scores[st][subj];
+                            });
+                            // Öğrenci listede yoksa ekle
+                            if(!masterData.students.includes(st)) masterData.students.push(st);
+                        });
 
-                // JSON'daki öğrenci listesini de kontrol et
-                if (data.students) {
-                    data.students.forEach(st => {
-                        if(!masterData.students.includes(st)) masterData.students.push(st);
-                    });
+                        // Listeyi birleştir
+                        if (newData.students) {
+                            newData.students.forEach(st => {
+                                if(!masterData.students.includes(st)) masterData.students.push(st);
+                            });
+                        }
+
+                        // Batch (toplu yazım) işlemine ekle
+                        batch.set(ref, masterData);
+                        classesFound.push(cls);
+                    }
                 }
 
-                // Güncellenmiş birleştirilmiş veriyi Firebase'e yaz
-                await fsDB.collection("Sınıflar").doc(cls).set(masterData);
-                
-                // Uygulama içindeki anlık değişkeni de güncelle
-                classMasterData[cls] = masterData;
-
-                alert(`✅ ${cls} Şubesi ${subj} dersi eski verileri başarıyla Firebase'e eklendi!`);
-                document.getElementById('jsonInput').value = "";
-                
-                // Eğer ekranda o an o şube ve ders açıksa arayüzü yenile
-                if(activeClass === cls && activeSubject === subj) {
-                    switchClass(cls);
-                    switchTab(subj);
+                if (classesFound.length > 0) {
+                    await batch.commit();
+                    alert(`✅ HARİKA! Sistem veriyi çözdü. ${classesFound.join(', ')} şubelerine ait veriler Firebase'e otomatik aktarıldı!`);
+                    document.getElementById('jsonInput').value = "";
+                    document.getElementById('dataModal').classList.add('hidden');
+                } else {
+                    alert("⚠️ JSON formatı tam anlaşılamadı. Lütfen PythonAnywhere'deki 'Tüm Sınıflar' (A, B, C, D düğümlerini içeren) yedeğinizi tam olarak kopyaladığınızdan emin olun.");
                 }
 
             } catch(e) { 
-                alert("Hata: " + e.message + " (JSON formatını kontrol edin)"); 
+                alert("HATA: JSON geçerli değil! Lütfen kopyaladığınız metinde eksik parantez olmadığından emin olun. " + e.message); 
             } finally {
                 btn.innerHTML = originalHtml;
                 btn.disabled = false;
             }
         }
 
-        // 3. ARAYÜZ VE GEZİNME FONKSİYONLARI
-        function switchClass(cls) {
-            activeClass = cls;
-            document.querySelectorAll('.class-tab').forEach(b => b.classList.remove('active'));
-            document.getElementById('class-tab-' + cls).classList.add('active');
-
-            if (currentStudent && !classMasterData[cls].students.includes(currentStudent)) {
-                currentStudent = null;
-                document.getElementById('searchInput').value = "";
-                document.getElementById('startMessage').style.display = 'flex';
-                document.getElementById('mainContent').style.display = 'none';
-                document.getElementById('quickNav').classList.add('hidden');
-            }
-            
-            if (currentStudent) {
-                document.getElementById('studentClassDisplay').innerText = `${activeClass} Şubesi - Mart 2026 Değ.`;
-                renderQuestions();
-            }
-        }
-
+        // ARAYÜZ VE GEZİNME FONKSİYONLARI
         function switchTab(subj) {
             activeSubject = subj;
             document.body.style.backgroundColor = themeColors[subj];
@@ -439,7 +419,7 @@
             list.innerHTML = "";
             if(!val) { cont.classList.add('hidden'); return; }
             
-            const students = classMasterData[activeClass].students;
+            const students = classMasterData.students;
             const m = students.filter(s=>s.toLocaleUpperCase('tr').includes(val));
             
             if(m.length>0) {
@@ -447,7 +427,7 @@
                 m.forEach(s => {
                     const li = document.createElement('li');
                     li.className = "px-4 py-3 cursor-pointer border-b hover:bg-blue-50 flex justify-between";
-                    const hasData = classMasterData[activeClass].scores[s] && classMasterData[activeClass].scores[s][activeSubject] && Object.keys(classMasterData[activeClass].scores[s][activeSubject]).length > 0;
+                    const hasData = classMasterData.scores[s] && classMasterData.scores[s][activeSubject] && Object.keys(classMasterData.scores[s][activeSubject]).length > 0;
                     li.innerHTML = `<span>${s}</span> ${hasData ? '<i class="fas fa-check text-green-500"></i>' : ''}`;
                     li.onclick = () => selectStudent(s);
                     list.appendChild(li);
@@ -462,7 +442,6 @@
             document.getElementById('startMessage').style.display = 'none';
             document.getElementById('mainContent').style.display = 'block';
             document.getElementById('studentNameDisplay').innerText = name;
-            document.getElementById('studentClassDisplay').innerText = `${activeClass} Şubesi - Mart 2026 Değ.`;
             document.getElementById('quickNav').classList.remove('hidden');
             document.getElementById('quickNav').classList.add('flex');
             renderQuestions();
@@ -478,7 +457,7 @@
                 const tabBtn = document.getElementById(`tab-${subj}`);
                 if (!tabBtn) return;
 
-                const hasData = classMasterData[activeClass].scores[currentStudent] && classMasterData[activeClass].scores[currentStudent][subj] && Object.keys(classMasterData[activeClass].scores[currentStudent][subj]).length > 0;
+                const hasData = classMasterData.scores[currentStudent] && classMasterData.scores[currentStudent][subj] && Object.keys(classMasterData.scores[currentStudent][subj]).length > 0;
                 
                 if (hasData) {
                     tabBtn.innerHTML = `${names[subj]} <i class="fas fa-check-circle text-green-500 ml-1" title="Kaydedildi"></i>`;
@@ -488,17 +467,17 @@
             });
         }
 
-        // 4. SORU LİSTELEME VE PUANLAMA
+        // SORU LİSTELEME VE PUANLAMA
         function renderQuestions() {
             const container = document.getElementById('questionsContainer');
             const quickNav = document.getElementById('quickNav');
             container.innerHTML = "";
             quickNav.innerHTML = "";
 
-            if (!classMasterData[activeClass].scores[currentStudent]) classMasterData[activeClass].scores[currentStudent] = {};
-            if (!classMasterData[activeClass].scores[currentStudent][activeSubject]) classMasterData[activeClass].scores[currentStudent][activeSubject] = {};
+            if (!classMasterData.scores[currentStudent]) classMasterData.scores[currentStudent] = {};
+            if (!classMasterData.scores[currentStudent][activeSubject]) classMasterData.scores[currentStudent][activeSubject] = {};
 
-            const studentData = classMasterData[activeClass].scores[currentStudent][activeSubject];
+            const studentData = classMasterData.scores[currentStudent][activeSubject];
             const currentQuestions = questionsData[activeSubject];
 
             currentQuestions.forEach((q, index) => {
@@ -581,31 +560,31 @@
             updateTabIndicators();
         }
 
-        function setScore(id, val) { classMasterData[activeClass].scores[currentStudent][activeSubject][id] = val; renderQuestions(); triggerAutoSync(); }
+        function setScore(id, val) { classMasterData.scores[currentStudent][activeSubject][id] = val; renderQuestions(); triggerAutoSync(); }
         function setMulti(id, idx, val) {
-            if(!classMasterData[activeClass].scores[currentStudent][activeSubject][id]) classMasterData[activeClass].scores[currentStudent][activeSubject][id] = {};
-            classMasterData[activeClass].scores[currentStudent][activeSubject][id][idx] = val;
+            if(!classMasterData.scores[currentStudent][activeSubject][id]) classMasterData.scores[currentStudent][activeSubject][id] = {};
+            classMasterData.scores[currentStudent][activeSubject][id][idx] = val;
             renderQuestions(); triggerAutoSync();
         }
 
         function setQuestionFull(id) {
             const q = questionsData[activeSubject].find(x => x.id === id);
-            if(q.type === 'score') classMasterData[activeClass].scores[currentStudent][activeSubject][q.id] = q.max;
-            else if(q.type === 'multi') { let p = {}; q.parts.forEach((x, i) => p[i] = x.v); classMasterData[activeClass].scores[currentStudent][activeSubject][q.id] = p; }
+            if(q.type === 'score') classMasterData.scores[currentStudent][activeSubject][q.id] = q.max;
+            else if(q.type === 'multi') { let p = {}; q.parts.forEach((x, i) => p[i] = x.v); classMasterData.scores[currentStudent][activeSubject][q.id] = p; }
             renderQuestions(); triggerAutoSync();
         }
 
         function setQuestionZero(id) {
             const q = questionsData[activeSubject].find(x => x.id === id);
-            if(q.type === 'score') classMasterData[activeClass].scores[currentStudent][activeSubject][q.id] = 0;
-            else if(q.type === 'multi') { let p = {}; q.parts.forEach((x, i) => p[i] = 0); classMasterData[activeClass].scores[currentStudent][activeSubject][q.id] = p; }
+            if(q.type === 'score') classMasterData.scores[currentStudent][activeSubject][q.id] = 0;
+            else if(q.type === 'multi') { let p = {}; q.parts.forEach((x, i) => p[i] = 0); classMasterData.scores[currentStudent][activeSubject][q.id] = p; }
             renderQuestions(); triggerAutoSync();
         }
 
         function markAllFull() {
             questionsData[activeSubject].forEach(q => {
-                if(q.type === 'score') classMasterData[activeClass].scores[currentStudent][activeSubject][q.id] = q.max;
-                else if(q.type === 'multi') { let p = {}; q.parts.forEach((x, i) => p[i] = x.v); classMasterData[activeClass].scores[currentStudent][activeSubject][q.id] = p; }
+                if(q.type === 'score') classMasterData.scores[currentStudent][activeSubject][q.id] = q.max;
+                else if(q.type === 'multi') { let p = {}; q.parts.forEach((x, i) => p[i] = x.v); classMasterData.scores[currentStudent][activeSubject][q.id] = p; }
             });
             renderQuestions(); triggerAutoSync();
         }
@@ -617,23 +596,23 @@
             if(btnTop) { btnTop.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ...'; btnTop.disabled = true; }
             if(btnBottom) { btnBottom.innerHTML = '<i class="fas fa-spinner fa-spin text-lg"></i> ...'; btnBottom.disabled = true; }
 
-            fsDB.collection("Sınıflar").doc(activeClass).set(classMasterData[activeClass])
+            fsDB.collection("Sınıflar").doc(activeClass).set(classMasterData)
             .then(() => {
                 if(btnTop) { btnTop.innerHTML = '<i class="fas fa-check-circle text-green-300"></i> KAYDEDİLDİ'; btnTop.classList.replace('bg-orange-600', 'bg-green-600'); }
                 if(btnBottom) { btnBottom.innerHTML = '<i class="fas fa-check-circle text-green-300 text-lg"></i> <span>KAYDEDİLDİ</span>'; btnBottom.classList.replace('bg-orange-600', 'bg-green-600'); }
 
                 setTimeout(() => {
-                    if(btnTop) { btnTop.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> KAYDET'; btnTop.disabled = false; btnTop.classList.replace('bg-green-600', 'bg-orange-600'); }
+                    if(btnTop) { btnTop.innerHTML = '<i class="fas fa-cloud-upload-alt text-sm"></i> KAYDET'; btnTop.disabled = false; btnTop.classList.replace('bg-green-600', 'bg-orange-600'); }
                     if(btnBottom) { btnBottom.innerHTML = '<i class="fas fa-cloud-upload-alt text-lg"></i> <span>KAYDET</span>'; btnBottom.disabled = false; btnBottom.classList.replace('bg-green-600', 'bg-orange-600'); }
                 }, 2000);
             }).catch((e) => {
                 alert("Hata: " + e.message);
-                if(btnTop) { btnTop.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> KAYDET'; btnTop.disabled = false; }
+                if(btnTop) { btnTop.innerHTML = '<i class="fas fa-cloud-upload-alt text-sm"></i> KAYDET'; btnTop.disabled = false; }
                 if(btnBottom) { btnBottom.innerHTML = '<i class="fas fa-cloud-upload-alt text-lg"></i> <span>KAYDET</span>'; btnBottom.disabled = false; }
             });
         }
 
-        // 5. RAPORLAMA VE ÇIKTI ALMA FONKSİYONLARI
+        // RAPORLAMA VE ÇIKTI ALMA FONKSİYONLARI
         function calculateSafeScore(data, q) {
             let s = 0; let rawVal = data[q.id];
             if (q.type === 'multi') {
@@ -651,10 +630,10 @@
             const subs = ['TR','MAT','FEN','SOS'];
             tbody.innerHTML = "";
             
-            const studentsList = [...classMasterData[activeClass].students].sort((a,b)=>a.localeCompare(b,'tr'));
+            const studentsList = [...classMasterData.students].sort((a,b)=>a.localeCompare(b,'tr'));
             
             if(studentsList.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="6" class="text-center p-8 text-slate-400 font-bold">Bu şubede henüz öğrenci bulunmuyor. Lütfen "Liste Düzenle" butonundan öğrenci ekleyin.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center p-8 text-slate-400 font-bold">Bu şubede henüz öğrenci bulunmuyor. Lütfen "Liste" butonundan öğrenci ekleyin.</td></tr>`;
                 return;
             }
 
@@ -663,7 +642,7 @@
                 let html = `<td class="font-bold text-gray-700 text-left">${s}</td>`;
                 subs.forEach(subj => {
                     let sc = 0;
-                    const d = (classMasterData[activeClass].scores[s] && classMasterData[activeClass].scores[s][subj]) ? classMasterData[activeClass].scores[s][subj] : {};
+                    const d = (classMasterData.scores[s] && classMasterData.scores[s][subj]) ? classMasterData.scores[s][subj] : {};
                     questionsData[subj].forEach(q => { sc += calculateSafeScore(d, q); });
                     total += sc;
                     html += `<td class="text-center font-semibold text-slate-600">${sc}</td>`;
@@ -675,16 +654,16 @@
 
         function downloadClassTableExcel() {
             const tbody = document.getElementById('classReportBody');
-            if(!tbody || classMasterData[activeClass].students.length === 0) return alert("İndirilecek veri yok.");
+            if(!tbody || classMasterData.students.length === 0) return alert("İndirilecek veri yok.");
 
-            let sortedStudents = [...classMasterData[activeClass].students].sort((a,b)=>a.localeCompare(b,'tr'));
+            let sortedStudents = [...classMasterData.students].sort((a,b)=>a.localeCompare(b,'tr'));
             const data = [];
             data.push(['Öğrenci', 'TR', 'MAT', 'FEN', 'SOS', 'TOPLAM']);
 
             sortedStudents.forEach(st => {
                 let total = 0;
                 const scores = ['TR','MAT','FEN','SOS'].map(s => {
-                    let sc = 0; const d = (classMasterData[activeClass].scores[st] && classMasterData[activeClass].scores[st][s]) ? classMasterData[activeClass].scores[st][s] : {};
+                    let sc = 0; const d = (classMasterData.scores[st] && classMasterData.scores[st][s]) ? classMasterData.scores[st][s] : {};
                     questionsData[s].forEach(q=>{ sc += calculateSafeScore(d, q); });
                     total+=sc; return sc;
                 });
@@ -698,17 +677,17 @@
         }
 
         async function downloadClassTablePDF() {
-            if(classMasterData[activeClass].students.length === 0) return alert("İndirilecek veri yok.");
+            if(classMasterData.students.length === 0) return alert("İndirilecek veri yok.");
             const { jsPDF } = window.jspdf; const doc = new jsPDF(); const font = await getFont();
             doc.addFileToVFS("Roboto.ttf", font); doc.addFont("Roboto.ttf", "Roboto", "normal"); doc.setFont("Roboto");
             doc.setFontSize(14); doc.text(`${activeClass} Şubesi Genel Tablo - Mart 2026`, 14, 15);
 
-            let sortedStudents = [...classMasterData[activeClass].students].sort((a,b)=>a.localeCompare(b,'tr'));
+            let sortedStudents = [...classMasterData.students].sort((a,b)=>a.localeCompare(b,'tr'));
             const head = [['Öğrenci', 'TR', 'MAT', 'FEN', 'SOS', 'TOP']];
             const body = sortedStudents.map(st => {
                 let total = 0;
                 const scores = ['TR','MAT','FEN','SOS'].map(s => {
-                    let sc = 0; const d = (classMasterData[activeClass].scores[st] && classMasterData[activeClass].scores[st][s]) ? classMasterData[activeClass].scores[st][s] : {};
+                    let sc = 0; const d = (classMasterData.scores[st] && classMasterData.scores[st][s]) ? classMasterData.scores[st][s] : {};
                     questionsData[s].forEach(q=>{ sc += calculateSafeScore(d, q); });
                     total+=sc; return sc;
                 });
@@ -730,7 +709,7 @@
             doc.setFontSize(15); doc.setFont("Roboto", "bold"); doc.text("MART 2026 DEĞERLENDİRME RAPORU", pageW / 2, 13, { align: 'center' });
             doc.setFontSize(11); doc.setFont("Roboto", "normal"); doc.text(`${currentStudent}  —  ${activeClass} Şubesi  —  ${subjectFullNames[activeSubject]}`, pageW / 2, 24, { align: 'center' });
 
-            const data = (classMasterData[activeClass].scores[currentStudent] && classMasterData[activeClass].scores[currentStudent][activeSubject]) ? classMasterData[activeClass].scores[currentStudent][activeSubject] : {};
+            const data = (classMasterData.scores[currentStudent] && classMasterData.scores[currentStudent][activeSubject]) ? classMasterData.scores[currentStudent][activeSubject] : {};
             const questions = questionsData[activeSubject];
             let totalScore = 0, totalMax = 0;
 
@@ -789,7 +768,7 @@
                 let y = 44; let grandTotal = 0, grandMax = 0;
 
                 for (const subj of subs) {
-                    const data = (classMasterData[activeClass].scores[currentStudent] && classMasterData[activeClass].scores[currentStudent][subj]) ? classMasterData[activeClass].scores[currentStudent][subj] : {};
+                    const data = (classMasterData.scores[currentStudent] && classMasterData.scores[currentStudent][subj]) ? classMasterData.scores[currentStudent][subj] : {};
                     const questions = questionsData[subj];
                     let subjTotal = 0, subjMax = 0;
                     questions.forEach(q => { subjTotal += calculateSafeScore(data, q); subjMax += q.max; });
@@ -847,7 +826,7 @@
             let grandTotal = 0, grandMax = 0; const subjResults = {};
 
             ['TR','MAT','FEN','SOS'].forEach(subj => {
-                const data = (classMasterData[activeClass].scores[currentStudent] && classMasterData[activeClass].scores[currentStudent][subj]) ? classMasterData[activeClass].scores[currentStudent][subj] : {};
+                const data = (classMasterData.scores[currentStudent] && classMasterData.scores[currentStudent][subj]) ? classMasterData.scores[currentStudent][subj] : {};
                 const qList = questionsData[subj]; let subTotal = 0, subMax = 0;
                 const tamlar = [], kismilar = [], sifirlar = [];
 
@@ -911,13 +890,13 @@
         
         function openEditModal() {
             document.getElementById('editModalTitle').innerText = activeClass;
-            document.getElementById('studentInput').value = classMasterData[activeClass].students.join('\n');
+            document.getElementById('studentInput').value = classMasterData.students.join('\n');
             document.getElementById('editModal').classList.remove('hidden'); document.getElementById('editModal').classList.add('flex');
         }
         
         function saveStudentsLocal() {
             const list = document.getElementById('studentInput').value.split('\n').map(x=>x.trim()).filter(x=>x);
-            classMasterData[activeClass].students = list;
+            classMasterData.students = list;
             document.getElementById('editModal').classList.add('hidden');
             syncToCloud(); alert(`${activeClass} Şubesi ana listesi güncellendi.`);
         }
