@@ -4,13 +4,14 @@
 // (Bunu kendi Firebase projenizin yapılandırmasıyla değiştirmeniz gerekebilir)
 // Uygulamanızda bu kısmı kendi config ayarlarınız ile değiştirin.
 const firebaseConfig = {
-  apiKey: "API_KEY_BURAYA",
-  authDomain: "PROJECT_ID.firebaseapp.com",
-  databaseURL: "https://PROJECT_ID-default-rtdb.firebaseio.com", 
-  projectId: "PROJECT_ID",
-  storageBucket: "PROJECT_ID.appspot.com",
-  messagingSenderId: "SENDER_ID",
-  appId: "APP_ID"
+  apiKey: "AIzaSyCzWg0ArosPt_O4t-veaqD8HdiSR9ygvFw",
+  authDomain: "bhveri.firebaseapp.com",
+  databaseURL: "https://bhveri-default-rtdb.firebaseio.com",
+  projectId: "bhveri",
+  storageBucket: "bhveri.firebasestorage.app",
+  messagingSenderId: "902116400674",
+  appId: "1:902116400674:web:96fa6356cea3d7499bf47b",
+  measurementId: "G-85JNVZ1KT0"
 };
 
 // Initialize Firebase (eğer henüz başlatılmadıysa)
