@@ -196,16 +196,13 @@ function renderBookManager() {
         let activeList = activeBooksMap[key] || [];
         let lastReader = lastHistoryMap[key];
         let status = activeList.length > 0 ? 'out' : 'in';
-        let avgScore = getRawRating(b);
         let pageCount = bookPages[b] || 0;
         
-        let bookRecs = records.filter(r => normalizeStr(r.book) === key && r.status === "İade Etti");
-        let readCount = bookRecs.length;
-        
-        let reviewedRecs = bookRecs.filter(r => r.comment);
-        let reviewCount = reviewedRecs.length;
-        
-        let lastReviewDate = reviewedRecs.length > 0 ? parseFloat(reviewedRecs[0].id) : 0;
+        let stats = bookStatsMap[key] || { readCount: 0, reviewCount: 0, totalRating: 0, ratingCount: 0, lastReviewDate: 0 };
+        let avgScore = stats.ratingCount > 0 ? (stats.totalRating / stats.ratingCount) : 0;
+        let readCount = stats.readCount;
+        let reviewCount = stats.reviewCount;
+        let lastReviewDate = stats.lastReviewDate;
 
         return { name: b, status: status, activeList: activeList, lastReader: lastReader, avgScore: avgScore, pageCount: pageCount, originalIndex: idx, readCount: readCount, reviewCount: reviewCount, lastReviewDate: lastReviewDate };
     });
@@ -274,24 +271,44 @@ function renderBookManager() {
 
 let activeBooksMap = {};
 let lastHistoryMap = {};
+let bookStatsMap = {};
 
 function analyzeData() { 
     activeBooksMap = {}; 
     lastHistoryMap = {}; 
+    bookStatsMap = {};
+
+    let totalPagesRead = 0;
+
     records.forEach(r => { 
         let key = normalizeStr(r.book); 
+        if (!bookStatsMap[key]) {
+            bookStatsMap[key] = { readCount: 0, reviewCount: 0, totalRating: 0, ratingCount: 0, lastReviewDate: 0 };
+        }
+
         if(r.status === "Okuyor") { 
             if(!activeBooksMap[key]) activeBooksMap[key] = []; 
             activeBooksMap[key].push(r); 
         } else if (r.status === "İade Etti") { 
             if(!lastHistoryMap[key]) lastHistoryMap[key] = { student: r.student, date: r.returnDate }; 
+
+            bookStatsMap[key].readCount++;
+            if (r.comment) {
+                bookStatsMap[key].reviewCount++;
+                let currentId = parseFloat(r.id);
+                if (currentId > bookStatsMap[key].lastReviewDate) {
+                    bookStatsMap[key].lastReviewDate = currentId;
+                }
+            }
+            if (r.rating && r.rating > 0) {
+                bookStatsMap[key].totalRating += parseInt(r.rating);
+                bookStatsMap[key].ratingCount++;
+            }
+
+            totalPagesRead += (parseInt(bookPages[r.book]) || 0);
         } 
     }); 
     
-    let totalPagesRead = 0; 
-    records.forEach(r => { 
-        if(r.status === "İade Etti") totalPagesRead += (parseInt(bookPages[r.book]) || 0); 
-    }); 
     if(document.getElementById('statTotalPages')) document.getElementById('statTotalPages').innerText = totalPagesRead.toLocaleString(); 
 }
 
@@ -299,8 +316,30 @@ function normalizeStr(str) { return str ? str.toString().trim().replace(/\s+/g, 
 function checkOverdue(dateStr) { if(!dateStr) return false; let parts = dateStr.split('.'); if(parts.length !== 3) return false; let bookDate = new Date(parts[2], parts[1]-1, parts[0]); let diffTime = Math.abs(new Date() - bookDate); return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) > 15; }
 function getRawRating(bookName) { let bookRecs = records.filter(r => normalizeStr(r.book) === normalizeStr(bookName) && r.rating); if(bookRecs.length === 0) return 0; return bookRecs.reduce((a, b) => a + parseInt(b.rating), 0) / bookRecs.length; }
 
-function handleInput(input) { let btn = input.nextElementSibling; if(btn && btn.classList.contains('clear-btn')) { btn.style.display = input.value.length > 0 ? 'block' : 'none'; } }
+function handleInput(input) {
+    // Clear btn might not be immediate next sibling anymore if we added other things
+    let btn = input.parentElement.querySelector('.clear-btn');
+    if(btn) { btn.style.display = input.value.length > 0 ? 'block' : 'none'; }
+}
 function clearField(id, callback) { let input = document.getElementById(id); input.value = ""; handleInput(input); if (callback) callback(); }
+
+function updateBookRatingDisplay() {
+    let input = document.getElementById('bookInput');
+    let display = document.getElementById('bookRatingDisplay');
+    if(!input || !display) return;
+    let val = input.value.trim();
+    if(val.length > 0) {
+        let avg = getRawRating(val);
+        if(avg > 0) {
+            display.innerHTML = `⭐ ${avg.toFixed(1)}`;
+            display.style.display = 'block';
+        } else {
+            display.style.display = 'none';
+        }
+    } else {
+        display.style.display = 'none';
+    }
+}
 function toggleTheme() { document.body.classList.toggle('dark-mode'); let isDark = document.body.classList.contains('dark-mode'); document.getElementById('themeIcon').innerText = isDark ? '☀️' : '🌙'; localStorage.setItem('theme', isDark ? 'dark' : 'light'); }
 function getLocalTime() { let now = new Date(); return now.toLocaleDateString('tr-TR') + " " + now.toLocaleTimeString('tr-TR', {hour: '2-digit', minute:'2-digit'}); }
 
@@ -405,7 +444,7 @@ function renderHistory() {
         let dateDisplay = `<i class="far fa-calendar-alt" style="opacity:0.7; margin-right:4px;"></i>${r.date}`; 
 
         if (r.status === "Okuyor") { 
-            actionBtn = `<button class="btn-return" onclick="returnBook('${r.id}')">İade Al</button>`; 
+            actionBtn = `<div style="display:flex; gap:5px;"><button class="btn-return" onclick="returnBook('${r.id}')">İade Al</button><button class="btn-danger" style="padding:8px 12px; border-radius:10px; cursor:pointer; border:none; display:flex; align-items:center; justify-content:center;" onclick="deleteRecord('${r.id}')" title="Sil"><i class="fas fa-trash"></i></button></div>`;
             
             if (r.date) {
                 let datePart = r.date.split(' ')[0];
@@ -477,8 +516,9 @@ function openBookDetail(bookName) {
         let fruit = document.createElement('div');
         fruit.className = 'tree-fruit';
         fruit.innerText = icon;
-        fruit.style.left = (40 + Math.random() * 320) + "px";
-        fruit.style.top = (30 + Math.random() * 250) + "px";
+        // Generate positions using percentages to map to the tree SVG correctly (SVG width is 400, leaves are approx 10% to 90% wide, 10% to 60% high)
+        fruit.style.left = (15 + Math.random() * 70) + "%";
+        fruit.style.top = (10 + Math.random() * 45) + "%";
         fruit.onclick = () => showFruitDetail(r);
         fruitsContainer.appendChild(fruit);
     });
@@ -574,6 +614,79 @@ function updateStudentPass(name, newPass) { studentPassObj[name] = newPass; sync
 function addNewBook() { let name = document.getElementById('newBookInput').value.trim(); if(!name) return alert("Kitap adı girin."); let page = prompt("Sayfa sayısı:", "100"); if(!books.includes(name)) { books.push(name); books.sort(); } bookPages[name] = parseInt(page) || 0; document.getElementById('newBookInput').value = ""; updateUI(); syncData(); }
 function delSingleBook(name) { if(confirm(name + " kitabı silinsin mi?")) { books = books.filter(b => b !== name); delete bookPages[name]; updateUI(); syncData(); } }
 function copyReport() { navigator.clipboard.writeText(document.getElementById('reportOutput').innerText); alert("Kopyalandı!"); }
+function printCertificate() {
+    const s = document.getElementById('reportStudentInput').value.trim().toLocaleUpperCase('tr-TR');
+    if(!s) return alert("Lütfen önce bir öğrenci seçin.");
+    let myRecs = records.filter(r => r.student === s && r.status === "İade Etti");
+    let totalP = 0;
+    myRecs.forEach(r => totalP += (parseInt(bookPages[r.book])||0));
+    let rank = getRank(myRecs.length);
+    let html = `
+    <html>
+    <head>
+        <title>${s} - Kitap Kurdu Belgesi</title>
+        <style>
+            @page { size: A4 landscape; margin: 0; }
+            body {
+                margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                background: radial-gradient(ellipse at bottom, #1b2735 0%, #090a0f 100%);
+                color: #fff; width: 100vw; height: 100vh; display: flex; align-items: center; justify-content: center;
+            }
+            .cert-container {
+                width: 90%; height: 85%; background: rgba(255, 255, 255, 0.05); border: 2px solid rgba(255,255,255,0.2);
+                border-radius: 20px; position: relative; overflow: hidden; padding: 40px; box-sizing: border-box;
+                text-align: center; box-shadow: 0 0 40px rgba(0,0,0,0.8);
+            }
+            .stars { position: absolute; top:0; left:0; right:0; bottom:0; background: url('https://s3-us-west-2.amazonaws.com/s.cdpn.io/1231630/stars.png'); z-index: -1; }
+            .header-text { font-size: 3rem; font-weight: 800; color: #f59e0b; margin-bottom: 10px; text-shadow: 0 0 20px #f59e0b; }
+            .sub-text { font-size: 1.5rem; color: #94a3b8; margin-bottom: 30px; }
+            .student-name { font-size: 4rem; font-weight: bold; color: #fff; margin-bottom: 20px; border-bottom: 2px solid #3b82f6; display: inline-block; padding-bottom: 10px; text-shadow: 0 0 15px #3b82f6; }
+            .stats-row { display: flex; justify-content: center; gap: 40px; margin-top: 30px; }
+            .stat-box { background: rgba(59, 130, 246, 0.2); padding: 20px 40px; border-radius: 15px; border: 1px solid rgba(59,130,246,0.5); }
+            .stat-val { font-size: 2.5rem; font-weight: bold; color: #10b981; }
+            .stat-lbl { font-size: 1.2rem; color: #cbd5e1; }
+            .astro-img { position: absolute; bottom: 20px; left: 40px; font-size: 6rem; filter: drop-shadow(0 0 10px gold); }
+            .planet-img { position: absolute; top: 30px; right: 50px; font-size: 5rem; }
+            .signature { position: absolute; bottom: 40px; right: 50px; text-align: center; }
+            .sig-line { width: 200px; border-bottom: 1px solid #fff; margin-bottom: 10px; }
+            .sig-name { font-size: 1.2rem; font-style: italic; color: #cbd5e1; }
+        </style>
+    </head>
+    <body>
+        <div class="cert-container">
+            <div class="stars"></div>
+            <div class="planet-img">🪐</div>
+            <div class="astro-img">👨‍🚀</div>
+            <div class="header-text">UZAY KİTAP YOLCULUĞU</div>
+            <div class="sub-text">Kitapların sonsuz galaksisinde gösterdiği üstün başarıdan dolayı</div>
+            <div class="student-name">${s}</div>
+            <div style="font-size: 1.8rem; color: #e2e8f0; margin-top: 10px;">Rütbe: <span style="color:#f59e0b;">${rank}</span></div>
+            <div class="stats-row">
+                <div class="stat-box">
+                    <div class="stat-val">${myRecs.length}</div>
+                    <div class="stat-lbl">Keşfedilen Kitap</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-val">${totalP.toLocaleString()}</div>
+                    <div class="stat-lbl">Aşılan Sayfa</div>
+                </div>
+            </div>
+            <div class="signature">
+                <div class="sig-line"></div>
+                <div class="sig-name">Zeynal Öğretmen</div>
+            </div>
+        </div>
+        <script>
+            setTimeout(() => { window.print(); }, 500);
+        </script>
+    </body>
+    </html>
+    `;
+    let win = window.open('', '_blank');
+    win.document.write(html);
+    win.document.close();
+}
+
 function populateDatalists() { let sl = document.getElementById('studentList'); sl.innerHTML = ''; let sLogin = document.getElementById('studentListLogin'); if(sLogin) sLogin.innerHTML = ''; students.sort().forEach(s => { sl.innerHTML += `<option value="${s}">`; if(sLogin) sLogin.innerHTML += `<option value="${s}">`; }); let bl = document.getElementById('bookList'); bl.innerHTML = ''; books.sort().forEach(b => { bl.innerHTML += `<option value="${b}">`; }); }
 function resetAllData() { let p = prompt("TÜM VERİLERİ SİLMEK İÇİN ŞİFREYİ GİRİN:"); if(p === teacherPassword) { if(confirm("Emin misiniz? Tüm öğrenciler, kitaplar ve kayıtlar silinecek!")) { students = []; books = []; records = []; bookPages = {}; studentPassObj={}; settings = { classTarget: 500, silverLimit: 3, goldLimit: 5 }; updateUI(); syncData(); alert("Sıfırlandı."); } } else { alert("Hatalı şifre!"); } }
 function getMedals(count) { let goldCount = Math.floor(count / settings.goldLimit); let silverCount = Math.floor(count / settings.silverLimit); let medals = ""; for(let i=0; i<goldCount; i++) medals += "🥇"; for(let i=0; i<silverCount; i++) medals += "🥈"; return medals; }
