@@ -58,7 +58,16 @@ window.onload = function() {
 
 // --- Veri Çekme (Firebase) ---
 function fetchData(isFirstLoad) {
+    // Add a timeout to catch cases where the DB is not reachable or permission is denied
+    let fetchTimeout = setTimeout(() => {
+        if (!isDataLoaded) {
+            document.getElementById('loader').innerText = "Veritabanına bağlanılamadı. Firebase ayarlarını ve veritabanı kurallarını kontrol edin.";
+            document.getElementById('loader').style.color = "#ef4444";
+        }
+    }, 10000);
+
     db.ref(DB_REF).once('value').then((snapshot) => {
+        clearTimeout(fetchTimeout);
         const data = snapshot.val() || {};
         processData(data);
         if(isFirstLoad) {
@@ -68,7 +77,9 @@ function fetchData(isFirstLoad) {
             updateUI();
         }
     }).catch(err => {
-        document.getElementById('loader').innerText = "Bağlantı Hatası! Lütfen sayfayı yenileyin.";
+        clearTimeout(fetchTimeout);
+        document.getElementById('loader').innerText = "Bağlantı/Yetki Hatası! Lütfen Firebase kurallarını kontrol edin.";
+        document.getElementById('loader').style.color = "#ef4444";
         console.error("Fetch Hatası:", err);
     });
 }
