@@ -629,36 +629,42 @@ function printCertificate() {
             @page { size: A4 landscape; margin: 0; }
             body {
                 margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                background: radial-gradient(ellipse at bottom, #1b2735 0%, #090a0f 100%);
-                color: #fff; width: 100vw; height: 100vh; display: flex; align-items: center; justify-content: center;
+                background: linear-gradient(135deg, #f0f4f8 0%, #d9e2ec 100%);
+                color: #334155; width: 100vw; height: 100vh; display: flex; align-items: center; justify-content: center;
+                -webkit-print-color-adjust: exact;
             }
             .cert-container {
-                width: 90%; height: 85%; background: rgba(255, 255, 255, 0.05); border: 2px solid rgba(255,255,255,0.2);
+                width: 90%; height: 85%; background: #ffffff; border: 4px solid #cbd5e1;
                 border-radius: 20px; position: relative; overflow: hidden; padding: 40px; box-sizing: border-box;
-                text-align: center; box-shadow: 0 0 40px rgba(0,0,0,0.8);
+                text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.1);
             }
-            .stars { position: absolute; top:0; left:0; right:0; bottom:0; background: url('https://s3-us-west-2.amazonaws.com/s.cdpn.io/1231630/stars.png'); z-index: -1; }
-            .header-text { font-size: 3rem; font-weight: 800; color: #f59e0b; margin-bottom: 10px; text-shadow: 0 0 20px #f59e0b; }
-            .sub-text { font-size: 1.5rem; color: #94a3b8; margin-bottom: 30px; }
-            .student-name { font-size: 4rem; font-weight: bold; color: #fff; margin-bottom: 20px; border-bottom: 2px solid #3b82f6; display: inline-block; padding-bottom: 10px; text-shadow: 0 0 15px #3b82f6; }
-            .stats-row { display: flex; justify-content: center; gap: 40px; margin-top: 30px; }
-            .stat-box { background: rgba(59, 130, 246, 0.2); padding: 20px 40px; border-radius: 15px; border: 1px solid rgba(59,130,246,0.5); }
-            .stat-val { font-size: 2.5rem; font-weight: bold; color: #10b981; }
-            .stat-lbl { font-size: 1.2rem; color: #cbd5e1; }
-            .astro-img { position: absolute; bottom: 20px; left: 40px; font-size: 6rem; filter: drop-shadow(0 0 10px gold); }
-            .planet-img { position: absolute; top: 30px; right: 50px; font-size: 5rem; }
-            .signature { position: absolute; bottom: 40px; right: 50px; text-align: center; }
-            .sig-line { width: 200px; border-bottom: 1px solid #fff; margin-bottom: 10px; }
-            .sig-name { font-size: 1.2rem; font-style: italic; color: #cbd5e1; }
+            .cert-inner-border {
+                position: absolute; top: 15px; left: 15px; right: 15px; bottom: 15px;
+                border: 2px dashed #94a3b8; border-radius: 12px; pointer-events: none;
+            }
+            .stars { position: absolute; top:0; left:0; right:0; bottom:0; background: url('https://s3-us-west-2.amazonaws.com/s.cdpn.io/1231630/stars.png'); opacity: 0.1; z-index: 0; pointer-events: none; }
+            .header-text { font-size: 2.8rem; font-weight: 800; color: #1e293b; margin-bottom: 10px; position: relative; z-index: 1; letter-spacing: 2px; text-transform: uppercase; }
+            .sub-text { font-size: 1.4rem; color: #475569; margin-bottom: 20px; font-style: italic; position: relative; z-index: 1; }
+            .student-name { font-size: 3.5rem; font-weight: bold; color: #2563eb; margin-bottom: 15px; display: inline-block; padding-bottom: 5px; position: relative; z-index: 1; }
+            .stats-row { display: flex; justify-content: center; gap: 30px; margin-top: 20px; position: relative; z-index: 1; }
+            .stat-box { background: #f8fafc; padding: 15px 30px; border-radius: 12px; border: 1px solid #e2e8f0; min-width: 150px; }
+            .stat-val { font-size: 2.2rem; font-weight: bold; color: #10b981; }
+            .stat-lbl { font-size: 1rem; color: #64748b; font-weight: 600; text-transform: uppercase; }
+            .astro-img { position: absolute; bottom: 30px; left: 40px; font-size: 5rem; opacity: 0.8; z-index: 0; }
+            .planet-img { position: absolute; top: 40px; right: 50px; font-size: 4rem; opacity: 0.7; z-index: 0; }
+            .signature { position: absolute; bottom: 40px; right: 50px; text-align: center; z-index: 1; }
+            .sig-line { width: 200px; border-bottom: 2px solid #334155; margin-bottom: 10px; }
+            .sig-name { font-size: 1.2rem; font-style: italic; color: #475569; font-weight: 600; }
         </style>
     </head>
     <body>
         <div class="cert-container">
+            <div class="cert-inner-border"></div>
             <div class="stars"></div>
             <div class="planet-img">🪐</div>
             <div class="astro-img">👨‍🚀</div>
-            <div class="header-text">UZAY KİTAP YOLCULUĞU</div>
-            <div class="sub-text">Kitapların sonsuz galaksisinde gösterdiği üstün başarıdan dolayı</div>
+            <div class="header-text">Kitap Kurdu Belgesi</div>
+            <div class="sub-text">Kitapların sonsuz galaksisinde gösterdiği üstün başarıdan dolayı seni kutlarım.</div>
             <div class="student-name">${s}</div>
             <div style="font-size: 1.8rem; color: #e2e8f0; margin-top: 10px;">Rütbe: <span style="color:#f59e0b;">${rank}</span></div>
             <div class="stats-row">
@@ -687,7 +693,31 @@ function printCertificate() {
     win.document.close();
 }
 
-function populateDatalists() { let sl = document.getElementById('studentList'); sl.innerHTML = ''; let sLogin = document.getElementById('studentListLogin'); if(sLogin) sLogin.innerHTML = ''; students.sort().forEach(s => { sl.innerHTML += `<option value="${s}">`; if(sLogin) sLogin.innerHTML += `<option value="${s}">`; }); let bl = document.getElementById('bookList'); bl.innerHTML = ''; books.sort().forEach(b => { bl.innerHTML += `<option value="${b}">`; }); }
+function populateDatalists() {
+    let sl = document.getElementById('studentList');
+    if(sl) sl.innerHTML = '';
+    let sLogin = document.getElementById('studentListLogin');
+    if(sLogin) sLogin.innerHTML = '';
+    students.sort().forEach(s => {
+        if(sl) sl.innerHTML += `<option value="${s}">`;
+        if(sLogin) sLogin.innerHTML += `<option value="${s}">`;
+    });
+
+    let bl = document.getElementById('bookList');
+    if(bl) {
+        bl.innerHTML = '';
+        books.sort().forEach(b => {
+            let key = normalizeStr(b);
+            let stats = bookStatsMap[key];
+            let avgScore = (stats && stats.ratingCount > 0) ? (stats.totalRating / stats.ratingCount).toFixed(1) : 0;
+            let ratingStr = avgScore > 0 ? ` (⭐ ${avgScore})` : "";
+            // The datalist option value must be just the book name so input matches exactly,
+            // but we can put the rating in the innerText or as an extra label for browsers that support it.
+            // A common way for datalists is <option value="Book Name">Book Name (⭐ 4.5)</option>
+            bl.innerHTML += `<option value="${b}">${b}${ratingStr}</option>`;
+        });
+    }
+}
 function resetAllData() { let p = prompt("TÜM VERİLERİ SİLMEK İÇİN ŞİFREYİ GİRİN:"); if(p === teacherPassword) { if(confirm("Emin misiniz? Tüm öğrenciler, kitaplar ve kayıtlar silinecek!")) { students = []; books = []; records = []; bookPages = {}; studentPassObj={}; settings = { classTarget: 500, silverLimit: 3, goldLimit: 5 }; updateUI(); syncData(); alert("Sıfırlandı."); } } else { alert("Hatalı şifre!"); } }
 function getMedals(count) { let goldCount = Math.floor(count / settings.goldLimit); let silverCount = Math.floor(count / settings.silverLimit); let medals = ""; for(let i=0; i<goldCount; i++) medals += "🥇"; for(let i=0; i<silverCount; i++) medals += "🥈"; return medals; }
 function getRank(count) { if(count >= 40) return "💎 EFSANE"; if(count >= 35) return "🌍 Bilge Okur"; if(count >= 30) return "🎩 Edebiyat Ustası"; if(count >= 25) return "👑 Kütüphane Muhafızı"; if(count >= 20) return "🏹 Kelime Avcısı"; if(count >= 15) return "🚀 Bilgi Kaşifi"; if(count >= 10) return "📖 Kitap Kurdu"; if(count >= 5)  return "🥉 Okuma Çırağı"; return "🌱 Başlangıç"; }
@@ -750,7 +780,7 @@ function renderStudentPanel() {
 }
 
 function deleteRecord(id) { 
-    if(confirm("Silmek istiyor musunuz?")) { 
+    if(confirm("DİKKAT: Bu işlemi geri alamazsınız!\n\nBu kaydı silmek istediğinizden emin misiniz? Sadece yanlışlıkla yapılan işlemleri iptal etmek için kullanın.")) {
         records = records.filter(r => String(r.id) !== String(id)); 
         updateUI(); 
         syncData(); 
