@@ -20,7 +20,7 @@ if (!firebase.apps.length) {
 }
 
 const db = firebase.database();
-const DB_REF = "kutuphane"; // Firebase'de verilerin tutulacağı düğüm
+const DB_REF = "/"; // Firebase'de verilerin tutulacağı düğüm
 
 // Global Değişkenler
 let settings = { classTarget: 500, silverLimit: 3, goldLimit: 5 };
