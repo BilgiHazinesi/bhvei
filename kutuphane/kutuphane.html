@@ -120,11 +120,7 @@
                 <div class="glass-panel">
                     <h3 style="margin:0 0 15px 0; color:var(--primary);">Hızlı İşlem</h3>
                     <div class="input-wrapper"><input type="text" list="studentList" id="studentInput" placeholder="Öğrenci Seçiniz..." oninput="handleInput(this); renderHistory()"><i class="fas fa-times-circle clear-btn" onclick="clearField('studentInput', renderHistory)"></i></div>
-                    <div class="input-wrapper">
-                        <input type="text" list="bookList" id="bookInput" placeholder="Kitap Seçiniz..." oninput="handleInput(this); updateBookRatingDisplay()">
-                        <div id="bookRatingDisplay" style="position:absolute; right:40px; top:50%; transform:translateY(-50%); font-size:0.85rem; font-weight:bold; color:#f59e0b; pointer-events:none; display:none;"></div>
-                        <i class="fas fa-times-circle clear-btn" onclick="clearField('bookInput', updateBookRatingDisplay)"></i>
-                    </div>
+                    <div class="input-wrapper"><input type="text" list="bookList" id="bookInput" placeholder="Kitap Seçiniz..." oninput="handleInput(this)"><i class="fas fa-times-circle clear-btn" onclick="clearField('bookInput')"></i></div>
                     <button class="btn btn-primary" onclick="lendBook()">Kitabı Teslim Et</button>
                 </div>
                 <div class="glass-panel">
@@ -159,10 +155,7 @@
                     <h3 style="margin:0 0 15px 0; color:var(--primary);">Motivasyon Raporu</h3>
                     <div class="input-wrapper"><input type="text" list="studentList" id="reportStudentInput" placeholder="Öğrenci Seçiniz..." oninput="handleInput(this); genReport()"><i class="fas fa-times-circle clear-btn" onclick="clearField('reportStudentInput')"></i></div>
                     <div id="reportOutput" style="background:var(--input-bg); padding:15px; border-radius:12px; margin:15px 0; white-space:pre-wrap; font-size:0.9rem; color:var(--text-main); border:var(--glass-border);">...</div>
-                    <div style="display:flex; gap:10px;">
-                        <button class="btn btn-primary" style="flex:1;" onclick="copyReport()"><i class="far fa-copy"></i> Kopyala</button>
-                        <button class="btn btn-primary" style="flex:1; background:linear-gradient(135deg, #10b981, #059669);" onclick="printCertificate()"><i class="fas fa-certificate"></i> Belge İndir</button>
-                    </div>
+                    <button class="btn btn-primary" onclick="copyReport()"><i class="far fa-copy"></i> Kopyala</button>
                     <div class="journey-container" id="spaceJourney"><div class="stars"></div><svg class="svg-path" id="journeySvg"></svg></div>
                 </div>
             </div>
