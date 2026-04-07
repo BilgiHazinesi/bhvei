@@ -122,3 +122,30 @@ body.dark-mode .fruit-detail-modal { background: rgba(30, 41, 59, 0.95); color: 
     background-color: #1e293b;
     color: #ffffff;
 }
+
+@media print {
+    body * {
+        visibility: hidden;
+    }
+    #tab-report, #tab-report * {
+        visibility: visible;
+    }
+    #tab-report {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        margin: 0;
+        padding: 0;
+    }
+    .bottom-nav, .app-header, .btn, .input-wrapper {
+        display: none !important;
+    }
+    .journey-container {
+        height: 500px !important;
+        border: 2px solid #000 !important;
+        background: #0f172a !important; /* Force space background */
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+}

@@ -155,7 +155,10 @@
                     <h3 style="margin:0 0 15px 0; color:var(--primary);">Motivasyon Raporu</h3>
                     <div class="input-wrapper"><input type="text" list="studentList" id="reportStudentInput" placeholder="Öğrenci Seçiniz..." oninput="handleInput(this); genReport()"><i class="fas fa-times-circle clear-btn" onclick="clearField('reportStudentInput')"></i></div>
                     <div id="reportOutput" style="background:var(--input-bg); padding:15px; border-radius:12px; margin:15px 0; white-space:pre-wrap; font-size:0.9rem; color:var(--text-main); border:var(--glass-border);">...</div>
-                    <button class="btn btn-primary" onclick="copyReport()"><i class="far fa-copy"></i> Kopyala</button>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn btn-primary" style="flex: 1;" onclick="copyReport()"><i class="far fa-copy"></i> Metni Kopyala</button>
+                        <button class="btn btn-primary" style="flex: 1; background-color: #8b5cf6;" onclick="printCertificate()"><i class="fas fa-file-pdf"></i> Belge Yazdır/İndir</button>
+                    </div>
                     <div class="journey-container" id="spaceJourney"><div class="stars"></div><svg class="svg-path" id="journeySvg"></svg></div>
                 </div>
             </div>
