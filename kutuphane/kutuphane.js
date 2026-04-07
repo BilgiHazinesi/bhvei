@@ -65,7 +65,6 @@ function fetchData(isFirstLoad) {
         if(isFirstLoad) {
             document.getElementById('loader').style.display = 'none';
             isDataLoaded = true; 
-            populateDatalists();
             updateUI(); 
         }
     }).catch(err => {
@@ -286,17 +285,31 @@ function renderBookManager() {
 
 let activeBooksMap = {};
 let lastHistoryMap = {};
+let bookStatsMap = {};
 
 function analyzeData() { 
     activeBooksMap = {}; 
     lastHistoryMap = {}; 
+    bookStatsMap = {};
     records.forEach(r => { 
         let key = normalizeStr(r.book); 
+        if(!bookStatsMap[key]) bookStatsMap[key] = { readCount: 0, reviewCount: 0, totalRating: 0, ratingCount: 0, lastReviewDate: 0 };
+
         if(r.status === "Okuyor") { 
             if(!activeBooksMap[key]) activeBooksMap[key] = []; 
             activeBooksMap[key].push(r); 
         } else if (r.status === "İade Etti") { 
             if(!lastHistoryMap[key]) lastHistoryMap[key] = { student: r.student, date: r.returnDate }; 
+            bookStatsMap[key].readCount++;
+            if (r.comment) bookStatsMap[key].reviewCount++;
+            if (r.rating && r.rating > 0) {
+                bookStatsMap[key].totalRating += r.rating;
+                bookStatsMap[key].ratingCount++;
+            }
+            let recId = parseFloat(r.id);
+            if (recId > bookStatsMap[key].lastReviewDate) {
+                bookStatsMap[key].lastReviewDate = recId;
+            }
         } 
     }); 
     
@@ -672,3 +685,4 @@ function deleteRecord(id) {
         updateUI(); 
         syncData(); 
     }
+}
