@@ -223,8 +223,12 @@ function renderBookManager() {
         let activeList = activeBooksMap[key] || [];
         let statusStr = activeList.length > 0 ? 'out' : 'in';
         let stats = bookStatsMap[key] || { readCount: 0, reviewCount: 0, totalRating: 0, ratingCount: 0 };
-        let rawAvg = stats.ratingCount > 0 ? (stats.totalRating / stats.ratingCount) : 0;
-        let avgScore = formatRating(rawAvg);
+        let avgScore = stats.ratingCount > 0 ? (stats.totalRating / stats.ratingCount).toFixed(1) : 0;
+        if (avgScore && avgScore.toString().endsWith('.0')) {
+            avgScore = parseInt(avgScore);
+        } else if (avgScore) {
+            avgScore = parseFloat(avgScore);
+        }
         let lastReader = lastHistoryMap[key];
         
         let item = {
@@ -246,7 +250,7 @@ function renderBookManager() {
                 </div>
             </div>`;
         } else {
-            let ratingHtml = item.avgScore != 0 ? ` <span style="color:#f59e0b; font-size:0.85rem;">⭐${item.avgScore}</span>` : "";
+            let ratingHtml = item.avgScore > 0 ? ` <span style="color:#f59e0b; font-size:0.85rem;">⭐${item.avgScore.toFixed(1)}</span>` : "";
             let pageHtml = item.pageCount > 0 ? `<span style="font-size:0.75rem; color:var(--text-sub); border:1px solid #ccc; padding:2px 6px; border-radius:8px; margin-left:5px;">${item.pageCount} Syf.</span>` : "";
             
             let details = "";
@@ -334,18 +338,6 @@ function stripRating(bookName) {
 }
 
 function normalizeStr(str) { return str ? str.toString().trim().replace(/\s+/g, ' ').toLocaleLowerCase('tr-TR') : ""; }
-
-function formatRating(score) {
-    if (!score) return 0;
-    let num = parseFloat(score);
-    if (isNaN(num)) return 0;
-    let formatted = num.toFixed(1);
-    if (formatted.endsWith('.0')) {
-        return parseInt(formatted).toString();
-    }
-    return formatted.replace('.', ',');
-}
-
 function checkOverdue(dateStr) { if(!dateStr) return false; let parts = dateStr.split('.'); if(parts.length !== 3) return false; let bookDate = new Date(parts[2], parts[1]-1, parts[0]); let diffTime = Math.abs(new Date() - bookDate); return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) > 15; }
 function getRawRating(bookName) { let stats = bookStatsMap[normalizeStr(bookName)]; if(!stats || stats.ratingCount === 0) return 0; return stats.totalRating / stats.ratingCount; }
 
@@ -632,9 +624,11 @@ function populateDatalists() {
     books.sort().forEach(b => { 
         let key = normalizeStr(b);
         let stats = bookStatsMap[key];
-        let rawAvg = (stats && stats.ratingCount > 0) ? (stats.totalRating / stats.ratingCount) : 0;
-        let avgScore = formatRating(rawAvg);
-        let ratingStr = avgScore != 0 ? `⭐ ${avgScore} - ` : "";
+        let avgScore = (stats && stats.ratingCount > 0) ? (stats.totalRating / stats.ratingCount).toFixed(1) : 0;
+        if (avgScore && avgScore.toString().endsWith('.0')) {
+            avgScore = parseInt(avgScore);
+        }
+        let ratingStr = avgScore > 0 ? `⭐ ${avgScore} - ` : "";
         bl.innerHTML += `<option value="${ratingStr}${b}"></option>`;
     }); 
 }
@@ -715,7 +709,7 @@ function deleteRecord(id) {
     <html>
     <head>
         <meta charset="utf-8">
-        <title>KİTAP KURDU BELGESİ</title>
+        <title>Kitap Kurdu Belgesi</title>
         <style>
             @page { size: A4 landscape; margin: 0; }
             body { 
@@ -737,9 +731,8 @@ function deleteRecord(id) {
                 text-align: center;
             }
             .title {
-                font-family: 'Arial Black', Impact, sans-serif;
                 font-size: 4rem; font-weight: 900; color: #1e3a8a;
-                letter-spacing: 2px;
+                text-transform: uppercase; letter-spacing: 2px;
                 margin-top: -20px;
                 text-shadow: 2px 2px 0px #fff, 4px 4px 0px rgba(0,0,0,0.1);
             }
@@ -814,7 +807,7 @@ function deleteRecord(id) {
                 </g>
             </svg>
             <div class="content">
-                <div class="title">KİTAP KURDU BELGESİ</div>
+                <div class="title">Kitap Kurdu Belgesi</div>
                 <div class="subtitle">Bu belge, okuma evreninde parlayan yıldızımıza takdim edilmiştir.</div>
                 
                 <div class="student-name">${s}</div>
