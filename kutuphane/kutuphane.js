@@ -303,8 +303,9 @@ function analyzeData() {
             if(!lastHistoryMap[key]) lastHistoryMap[key] = { student: r.student, date: r.returnDate }; 
             bookStatsMap[key].readCount++;
             if (r.comment) bookStatsMap[key].reviewCount++;
-            if (r.rating && r.rating > 0) {
-                bookStatsMap[key].totalRating += r.rating;
+            let rRating = parseFloat(r.rating);
+            if (!isNaN(rRating) && rRating > 0) {
+                bookStatsMap[key].totalRating += rRating;
                 bookStatsMap[key].ratingCount++;
             }
             let recId = parseFloat(r.id);
@@ -455,7 +456,7 @@ function renderHistory() {
         let dateDisplay = `<i class="far fa-calendar-alt" style="opacity:0.7; margin-right:4px;"></i>${r.date}`; 
 
         if (r.status === "Okuyor") { 
-            actionBtn = `<button class="btn-return" onclick="returnBook('${r.id}')">İade Al</button>`;
+            actionBtn = `<div style="display:flex; gap:5px;"><button class="btn-return" onclick="returnBook('${r.id}')">İade Al</button><button class="btn-delete" style="width:36px; height:36px; padding:0; display:flex; align-items:center; justify-content:center;" onclick="deleteRecord('${r.id}')" title="Hatalı kaydı sil"><i class="fas fa-trash"></i></button></div>`;
             
             if (r.date) {
                 let datePart = r.date.split(' ')[0];
