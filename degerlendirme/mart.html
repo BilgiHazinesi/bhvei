@@ -300,6 +300,77 @@
             autoSyncTimer = setTimeout(() => { syncToCloud(); }, 1500); 
         }
 
+        function sumOldScores(data, oldIds) {
+            let sum = 0;
+            oldIds.forEach(id => {
+                const rawVal = data[id];
+                if (rawVal !== undefined) {
+                    if (typeof rawVal === 'object' && rawVal !== null) {
+                        Object.values(rawVal).forEach(v => sum += v);
+                    } else if (typeof rawVal === 'number') {
+                        sum += rawVal;
+                    }
+                }
+            });
+            return sum;
+        }
+
+        function migrateData() {
+            let migrated = false;
+            if(!classMasterData.scores) return;
+            
+            Object.keys(classMasterData.scores).forEach(st => {
+                ['TR', 'MAT', 'FEN', 'SOS'].forEach(subj => {
+                    let sData = classMasterData.scores[st][subj];
+                    if (!sData) return;
+                    let needsMigration = false;
+                    
+                    if (subj === 'TR' && sData.t1 !== undefined) {
+                        sData.t1_3 = sumOldScores(sData, ['t1', 't2', 't3']);
+                        sData.t4_5 = sumOldScores(sData, ['t4', 't5']);
+                        sData.t6 = sumOldScores(sData, ['t6']);
+                        sData.t7 = sumOldScores(sData, ['t7']);
+                        sData.t8 = sumOldScores(sData, ['t8']);
+                        sData.t9 = sumOldScores(sData, ['t9']);
+                        sData.t10 = sumOldScores(sData, ['t10']);
+                        ['t1', 't2', 't3', 't4', 't5'].forEach(k => delete sData[k]);
+                        needsMigration = true;
+                    }
+                    
+                    if (subj === 'MAT' && (typeof sData.m1 === 'object' || typeof sData.m4 === 'object' || typeof sData.m12 === 'object')) {
+                        for(let i=1; i<=13; i++) {
+                            let k = 'm'+i;
+                            sData[k] = sumOldScores(sData, [k]);
+                        }
+                        needsMigration = true;
+                    }
+
+                    if (subj === 'FEN' && (typeof sData.f1 === 'object' || typeof sData.f6 === 'object')) {
+                        for(let i=1; i<=8; i++) {
+                            let k = 'f'+i;
+                            sData[k] = sumOldScores(sData, [k]);
+                        }
+                        needsMigration = true;
+                    }
+
+                    if (subj === 'SOS' && (typeof sData.s5 === 'object' || typeof sData.s12 === 'object')) {
+                        for(let i=1; i<=12; i++) {
+                            let k = 's'+i;
+                            sData[k] = sumOldScores(sData, [k]);
+                        }
+                        needsMigration = true;
+                    }
+
+                    if (needsMigration) migrated = true;
+                });
+            });
+            
+            if (migrated) {
+                console.log("Eski rubrik verileri yeni formata dönüştürüldü.");
+                syncToCloud();
+            }
+        }
+
         // ESKİ TİP SINIF YÜKLEME (TIKLANDIĞINDA YÜKLER)
         async function bootClass(cls) {
             const spinner = document.getElementById('bootSpinner');
@@ -314,6 +385,7 @@
                     classMasterData = docRef.data();
                     if(!classMasterData.students) classMasterData.students = [];
                     if(!classMasterData.scores) classMasterData.scores = {};
+                    migrateData();
                 } else {
                     classMasterData = { students: [], scores: {} };
                 }
@@ -1023,47 +1095,86 @@
 
     document.getElementById('hdp-close-btn').addEventListener('click', () => panel.remove());
     
-    document.getElementById('hdp-fill-btn').addEventListener('click', () => {
+    function fillStudentData() {
         const student = document.getElementById('hdp-student-select').value;
-        if(!student) return alert("Lütfen bir öğrenci seçin!");
+        if(!student) return;
         
+        const btn = document.getElementById('hdp-fill-btn');
+        btn.innerHTML = "BEKLENIYOR...";
+        btn.style.background = "#f59e0b"; // amber
+
         const scores = data[student];
-        // Sayfadaki input alanlarını buluyoruz (text ve number olanlar)
-        // Okul sitesindeki inputları hedefliyoruz.
-        const inputs = Array.from(document.querySelectorAll('input[type="text"], input[type="number"]')).filter(i => {
-            // Sadece sayı girilebilecek genişlikteki/özellikteki inputları ayıklamak için
-            // Okul sitesindeki özel bir class'ı veya özelliği buraya ekleyebilirsiniz, 
-            // Şimdilik sayfada sadece not girilen inputların olduğunu varsayıyoruz (veya ilk X tanesini alıyoruz)
-            return true; 
-        });
-
-        if(inputs.length < scores.length) {
-            alert("Sayfada yeterli input alanı bulunamadı! Beklenen: " + scores.length + ", Bulunan: " + inputs.length);
-        }
-
-        let filled = 0;
-        for(let i=0; i<scores.length; i++) {
-            if(inputs[i]) {
-                inputs[i].value = scores[i];
-                // Event trigger'ları, React/Vue vb. algılasın diye
-                inputs[i].dispatchEvent(new Event('input', { bubbles: true }));
-                inputs[i].dispatchEvent(new Event('change', { bubbles: true }));
-                filled++;
+        
+        // 1. Öğrenci sekmesini bul ve tıkla
+        const els = Array.from(document.querySelectorAll('span, div, button, a, li'));
+        const targetEl = els.find(el => 
+            el.children.length <= 1 && 
+            el.textContent && 
+            el.textContent.trim().toUpperCase().includes(student.toUpperCase())
+        );
+        
+        if (targetEl) {
+            targetEl.click();
+            let parent = targetEl.parentElement;
+            for(let i=0; i<3; i++) {
+                if(parent) { parent.click(); parent = parent.parentElement; }
             }
+        } else {
+            console.warn("Öğrenci sekmesi sayfada bulunamadı: " + student);
         }
-        
-        // Kaydet butonunu otomatik tıkla (Opsiyonel)
-        // const saveBtn = document.querySelector('button.kaydet-butonu-class');
-        // if(saveBtn) saveBtn.click();
-        
-        // alert("Başarılı! " + filled + " input alanı dolduruldu.");
-        document.getElementById('hdp-fill-btn').innerHTML = "DOLDURULDU ✓";
-        document.getElementById('hdp-fill-btn').style.background = "#3b82f6";
+
+        // 2. DOM'un güncellenmesi için kısa bir süre bekle (React/Vue için)
         setTimeout(() => {
-            document.getElementById('hdp-fill-btn').innerHTML = "DOLDUR";
-            document.getElementById('hdp-fill-btn').style.background = "#10b981";
-        }, 1500);
-    });
+            let inputs = Array.from(document.querySelectorAll('input')).filter(i => {
+                if(['hidden', 'checkbox', 'radio', 'search', 'submit', 'button'].includes(i.type)) return false;
+                if(i.placeholder && i.placeholder.toLowerCase().includes('ara')) return false;
+                // Readonly veya disabled inputları atla (isim soyisim inputu vb. olabilir)
+                if(i.readOnly || i.disabled) return false;
+                return true;
+            });
+
+            // Genellikle sayfadaki not inputları en sonda yer alır.
+            // Eğer input sayısı not sayısından fazlaysa (örneğin üstte bir arama çubuğu varsa),
+            // input listesinin sonundan not sayısı kadar olan kısmı alıyoruz.
+            if(inputs.length > scores.length) {
+                inputs = inputs.slice(inputs.length - scores.length);
+            }
+
+            if(inputs.length < scores.length) {
+                console.warn("Sayfada yeterli input alanı bulunamadı! Beklenen: " + scores.length + ", Bulunan: " + inputs.length);
+            }
+
+            let filled = 0;
+            for(let i=0; i<scores.length; i++) {
+                if(inputs[i]) {
+                    // React Hack: React'ın state'ini güncelleyebilmesi için native setter'ı kullan
+                    const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
+                    if (nativeInputValueSetter) {
+                        nativeInputValueSetter.call(inputs[i], scores[i]);
+                    } else {
+                        inputs[i].value = scores[i];
+                    }
+                    
+                    inputs[i].dispatchEvent(new Event('input', { bubbles: true }));
+                    inputs[i].dispatchEvent(new Event('change', { bubbles: true }));
+                    // Vue veya bazı custom framework'ler için blur/focus eventleri de tetiklenebilir
+                    inputs[i].dispatchEvent(new Event('blur', { bubbles: true }));
+                    filled++;
+                }
+            }
+            
+            btn.innerHTML = "DOLDURULDU ✓";
+            btn.style.background = "#3b82f6";
+            setTimeout(() => {
+                btn.innerHTML = "DOLDUR";
+                btn.style.background = "#10b981";
+            }, 1500);
+        }, 800); // 800ms bekle
+    }
+
+    // Hem butona basınca hem de seçilen öğrenci değişince otomatik çalıştır
+    document.getElementById('hdp-fill-btn').addEventListener('click', fillStudentData);
+    document.getElementById('hdp-student-select').addEventListener('change', fillStudentData);
 })();
             `;
 
