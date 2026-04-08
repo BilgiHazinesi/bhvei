@@ -5,6 +5,154 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hızlı Değerlendirme Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        function showToast(msg, type='info') {
+            const toast = document.getElementById('toastNotification');
+            const icon = toast.querySelector('i');
+            document.getElementById('toastText').innerText = msg;
+
+            toast.className = 'fixed top-5 left-1/2 transform -translate-x-1/2 text-white px-6 py-3 rounded-full shadow-2xl z-[1000] font-bold text-sm transition-all duration-300 flex items-center gap-2';
+
+            if(type === 'success') {
+                toast.classList.add('bg-emerald-600');
+                icon.className = 'fas fa-check-circle text-white';
+            } else if(type === 'error') {
+                toast.classList.add('bg-red-600');
+                icon.className = 'fas fa-exclamation-circle text-white';
+            } else {
+                toast.classList.add('bg-slate-800');
+                icon.className = 'fas fa-info-circle text-blue-400';
+            }
+
+            toast.style.opacity = '1';
+            toast.style.transform = 'translate(-50%, 0)';
+
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translate(-50%, -20px)';
+            }, 3000);
+        }
+
+        // Global Paste Listener
+        document.addEventListener('paste', async (e) => {
+            // Eğer kullanıcı arama kutusuna (veya textarea'ya) bilerek yapıştırıyorsa engelleme
+            const activeTag = document.activeElement.tagName.toLowerCase();
+            if (activeTag === 'textarea' || (activeTag === 'input' && document.activeElement.id !== 'searchInput')) return;
+
+            e.preventDefault(); // Varsayılan yapıştırmayı durdur
+            let pastedText = (e.clipboardData || window.clipboardData).getData('text');
+            if(!pastedText) return;
+
+            pastedText = pastedText.trim();
+            // Kullanıcı metni şöyle kopyalamış olabilir:
+            // "AHMET CEVDET KORKMAZ
+            // 4-D"
+            // Metni satırlara böl
+            const lines = pastedText.split('\n').map(l => l.trim()).filter(l => l);
+            if(lines.length === 0) return;
+
+            let extractedName = "";
+            let targetClass = activeClass; // Varsayılan olarak mevcut sınıf
+            let classChanged = false;
+
+            // Satırlarda sınıfı bulmaya çalış (ör: 4-A, 4-B, vb.)
+            for(let line of lines) {
+                let classMatch = line.match(/\b[1-4]\s*[-/]?\s*([A-D])\b/i);
+                if(classMatch) {
+                    targetClass = classMatch[1].toUpperCase();
+                    // Sınıfı bulduğumuz satırı isim olarak değerlendirme
+                } else if(line.length > 3 && !extractedName) {
+                    // İlk mantıklı uzun satırı isim kabul et
+                    extractedName = line;
+                }
+            }
+
+            // Eğer isme ulaşamadıysak doğrudan tüm yapıştırılan metni isim kabul et
+            if(!extractedName) extractedName = pastedText.replace(/\b[1-4]\s*[-/]?\s*[A-D]\b/gi, '').trim();
+
+            // İsmi temizle (başlıkları, vb.)
+            extractedName = extractedName.toLocaleUpperCase('tr').replace(/[^A-ZÇĞİÖŞÜ\s]/gi, '').trim();
+
+            if(!extractedName) {
+                showToast("Panodan geçerli bir isim bulunamadı.", 'error');
+                return;
+            }
+
+            // Sınıf değişikliği gerekiyor mu?
+            if(targetClass !== activeClass) {
+                showToast(targetClass + " şubesine geçiliyor...", 'info');
+                await bootClass(targetClass);
+                classChanged = true;
+            }
+
+            // Öğrenciyi mevcut listede ara
+            let studentsList = classMasterData.students;
+
+            // Tam eşleşme ara
+            let foundStudent = studentsList.find(s => s.toLocaleUpperCase('tr') === extractedName);
+
+            // Tam eşleşme yoksa kısmı eşleşme ara (ilk kelimeler)
+            if(!foundStudent) {
+                const words = extractedName.split(' ');
+                if(words.length >= 2) {
+                    foundStudent = studentsList.find(s => s.toLocaleUpperCase('tr').includes(words[0]) && s.toLocaleUpperCase('tr').includes(words[1]));
+                }
+            }
+
+            if(foundStudent) {
+                selectStudent(foundStudent);
+                showToast("Bulundu: " + foundStudent, 'success');
+                // Hızlı okuma panelini aç
+                document.getElementById('quickReadPanel').classList.remove('hidden');
+                document.getElementById('quickReadPanel').classList.add('flex');
+                setTimeout(() => document.getElementById('quickReadPanel').classList.remove('scale-95'), 50);
+            } else {
+                showToast("Öğrenci (" + extractedName + ") bu şubede (" + targetClass + ") bulunamadı!", 'error');
+                if(!classChanged) {
+                    document.getElementById('searchInput').value = extractedName;
+                    filterStudents();
+                }
+            }
+        });
+
+        // Hızlı Okuma Panelini Güncelleyen Fonksiyon (renderQuestions içinde çağrılacak)
+        function updateQuickReadPanel() {
+            const panel = document.getElementById('quickReadPanel');
+            if(panel.classList.contains('hidden')) return;
+
+            if(!currentStudent) return;
+
+            document.getElementById('qrStudentName').innerText = currentStudent;
+            const subjectFullNames = { TR:'TÜRKÇE', MAT:'MATEMATİK', FEN:'FEN BİLİMLERİ', SOS:'SOSYAL BİLGİLER' };
+            document.getElementById('qrSubjectName').innerText = subjectFullNames[activeSubject];
+
+            const list = document.getElementById('qrScoresList');
+            list.innerHTML = "";
+            let total = 0;
+
+            const data = (classMasterData.scores[currentStudent] && classMasterData.scores[currentStudent][activeSubject]) ? classMasterData.scores[currentStudent][activeSubject] : {};
+
+            questionsData[activeSubject].forEach((q, i) => {
+                const sc = calculateSafeScore(data, q);
+                total += sc;
+
+                // Sade görünüm: Soru 1: 36
+                const qShortTitle = q.title.split(' ')[0] + " " + (i+1); // Sadece konu ve sıra no
+
+                const item = document.createElement('div');
+                item.className = "flex justify-between items-center py-1 border-b border-dashed border-blue-100 last:border-0";
+                item.innerHTML = `
+                    <span class="text-xs text-slate-600 font-semibold truncate flex-1 pr-2" title="${q.title}">${q.title}</span>
+                    <span class="text-sm font-black ${sc === q.max ? 'text-emerald-500' : sc === 0 ? 'text-red-500' : 'text-orange-500'} bg-slate-50 px-2 py-0.5 rounded border border-slate-100 min-w-[30px] text-center">${sc}</span>
+                `;
+                list.appendChild(item);
+            });
+
+            document.getElementById('qrTotalScore').innerText = total;
+        }
+
+
+</script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -81,7 +229,7 @@
 
                     <div class="relative w-full md:max-w-md lg:max-w-lg">
                         <div class="relative h-10"> 
-                            <input type="text" id="searchInput" class="w-full h-full pl-9 pr-10 border-2 border-slate-300 rounded-lg bg-white focus:border-blue-600 focus:ring-0 font-bold text-sm outline-none shadow-sm transition" placeholder="Öğrenci Ara..." oninput="filterStudents()" onfocus="filterStudents()" autocomplete="off">
+                            <input type="text" id="searchInput" class="w-full h-full pl-9 pr-10 border-2 border-slate-300 rounded-lg bg-white focus:border-blue-600 focus:ring-0 font-bold text-sm outline-none shadow-sm transition" placeholder="Öğrenci Ara veya İsim Yapıştır (Ctrl+V)" oninput="filterStudents()" onfocus="filterStudents()" autocomplete="off">
                             <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 text-sm"></i>
                             <div class="clear-btn" onclick="clearSearch()"><i class="fas fa-times"></i></div>
                         </div>
@@ -95,7 +243,7 @@
 
                         <button onclick="openDataModal()" class="bg-slate-700 text-white px-2.5 py-1.5 rounded-lg font-bold text-xs shadow-sm hover:bg-slate-800 flex items-center gap-1.5 transition active:scale-95" title="JSON Yükle"><i class="fas fa-file-import"></i></button>
 
-                        <button onclick="openExportCodeModal()" class="bg-indigo-600 text-white px-2.5 py-1.5 rounded-lg font-bold text-xs shadow-sm hover:bg-indigo-700 flex items-center gap-1.5 transition active:scale-95"><i class="fas fa-code"></i> <span class="hidden sm:inline">Okul Sitesine Aktar</span></button>
+
 
                         <button onclick="openClassReport()" class="bg-teal-600 text-white px-2.5 py-1.5 rounded-lg font-bold text-xs shadow-sm hover:bg-teal-700 flex items-center gap-1.5 transition active:scale-95"><i class="fas fa-chart-bar"></i> <span class="hidden sm:inline">Özet</span></button>
                         <button onclick="openEditModal()" class="bg-slate-600 text-white px-2.5 py-1.5 rounded-lg font-bold text-xs shadow-sm hover:bg-slate-700 flex items-center gap-1.5 transition active:scale-95"><i class="fas fa-list"></i> <span class="hidden sm:inline">Liste</span></button>
@@ -204,17 +352,7 @@
         </div>
     </div>
 
-    <div id="exportCodeModal" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-[60] backdrop-blur-sm">
-        <div class="bg-white p-8 rounded-3xl w-full max-w-2xl shadow-2xl">
-            <h3 class="font-bold mb-2 text-xl text-slate-800 flex items-center gap-2"><i class="fas fa-code text-indigo-500 text-2xl"></i> Okul Sitesine Aktar</h3>
-            <p class="text-xs text-slate-500 mb-4">Aşağıdaki kodu kopyalayın, okul sitesine gidin, <b>F12 (Console)</b> açın ve yapıştırıp <b>Enter</b>'a basın.</p>
-            <textarea id="exportCodeText" class="w-full h-[300px] border-2 p-4 rounded-xl text-[11px] font-mono bg-slate-900 text-green-400 focus:border-indigo-500 outline-none resize-y leading-relaxed" readonly></textarea>
-            <div class="mt-6 flex gap-3">
-                <button onclick="copyExportCode()" class="flex-1 bg-indigo-500 text-white py-3 rounded-xl font-bold hover:bg-indigo-600 shadow-lg transition flex items-center justify-center gap-2"><i class="fas fa-copy"></i> Kodu Kopyala</button>
-                <button onclick="document.getElementById('exportCodeModal').classList.add('hidden'); document.getElementById('exportCodeModal').classList.remove('flex')" class="flex-1 bg-slate-200 text-slate-700 py-3 rounded-xl font-bold hover:bg-slate-300 transition">Kapat</button>
-            </div>
-        </div>
-    </div>
+
 
     <script>
         const firebaseConfig = {
@@ -697,6 +835,7 @@
                 card.innerHTML = inner; container.appendChild(card);
             });
             updateTabIndicators();
+            updateQuickReadPanel();
         }
 
         function setScore(id, val) { classMasterData.scores[currentStudent][activeSubject][id] = val; renderQuestions(); triggerAutoSync(); }
@@ -1040,153 +1179,29 @@
             syncToCloud(); alert(`${activeClass} Şubesi ana listesi güncellendi.`);
         }
 
-        function openExportCodeModal() {
-            const subjectFullNames = { TR:'TÜRKÇE', MAT:'MATEMATİK', FEN:'FEN BİLİMLERİ', SOS:'SOSYAL BİLGİLER' };
-            const subTitle = subjectFullNames[activeSubject];
 
-            const sortedStudents = [...classMasterData.students].sort((a,b)=>a.localeCompare(b,'tr'));
-            let extractData = {};
-
-            sortedStudents.forEach(st => {
-                const data = (classMasterData.scores[st] && classMasterData.scores[st][activeSubject]) ? classMasterData.scores[st][activeSubject] : {};
-                let studentScores = [];
-                questionsData[activeSubject].forEach(q => {
-                    studentScores.push(calculateSafeScore(data, q));
-                });
-                extractData[st] = studentScores;
-            });
-
-            const codeString = `
-(function(){
-    const data = ${JSON.stringify(extractData)};
-    const className = "${activeClass}";
-    const subjectName = "${subTitle}";
-
-    // If a panel already exists, remove it
-    const existing = document.getElementById('hdp-auto-panel');
-    if(existing) existing.remove();
-
-    const panel = document.createElement('div');
-    panel.id = 'hdp-auto-panel';
-    panel.style.cssText = "position:fixed; top:20px; right:20px; background:#1e293b; color:white; padding:20px; border-radius:12px; z-index:999999; font-family:sans-serif; box-shadow:0 10px 25px rgba(0,0,0,0.5); width:300px; border:2px solid #3b82f6;";
-
-    let html = '<h3 style="margin:0 0 10px 0; font-size:16px; color:#60a5fa;">🚀 Hızlı Değerlendirme Pro</h3>';
-    html += '<p style="margin:0 0 15px 0; font-size:13px; color:#cbd5e1;">Şube: <b>' + className + '</b> | Ders: <b>' + subjectName + '</b></p>';
-
-    html += '<select id="hdp-student-select" style="width:100%; padding:10px; margin-bottom:15px; border-radius:6px; background:#0f172a; color:white; border:1px solid #475569; font-size:14px; outline:none;">';
-    html += '<option value="">-- Öğrenci Seçin --</option>';
-
-    for(let student in data) {
-        let scores = data[student];
-        // Sadece tüm puanları girilmiş (ya da hepsi sıfır olmayan vb.) kişileri göstermek isterseniz buraya şart koyabilirsiniz.
-        // Şimdilik herkesi ekliyoruz.
-        html += '<option value="' + student + '">' + student + '</option>';
-    }
-
-    html += '</select>';
-
-    html += '<div style="display:flex; gap:10px;">';
-    html += '<button id="hdp-fill-btn" style="flex:1; background:#10b981; color:white; border:none; padding:10px; border-radius:6px; font-weight:bold; cursor:pointer; font-size:14px;">DOLDUR</button>';
-    html += '<button id="hdp-close-btn" style="flex:0.5; background:#ef4444; color:white; border:none; padding:10px; border-radius:6px; font-weight:bold; cursor:pointer; font-size:14px;">KAPAT</button>';
-    html += '</div>';
-
-    panel.innerHTML = html;
-    document.body.appendChild(panel);
-
-    document.getElementById('hdp-close-btn').addEventListener('click', () => panel.remove());
-
-    function fillStudentData() {
-        const student = document.getElementById('hdp-student-select').value;
-        if(!student) return;
-
-        const btn = document.getElementById('hdp-fill-btn');
-        btn.innerHTML = "BEKLENIYOR...";
-        btn.style.background = "#f59e0b"; // amber
-
-        const scores = data[student];
-
-        // 1. Öğrenci sekmesini bul ve tıkla
-        const els = Array.from(document.querySelectorAll('span, div, button, a, li'));
-        const targetEl = els.find(el =>
-            el.children.length <= 1 &&
-            el.textContent &&
-            el.textContent.trim().toUpperCase().includes(student.toUpperCase())
-        );
-
-        if (targetEl) {
-            targetEl.click();
-            let parent = targetEl.parentElement;
-            for(let i=0; i<3; i++) {
-                if(parent) { parent.click(); parent = parent.parentElement; }
-            }
-        } else {
-            console.warn("Öğrenci sekmesi sayfada bulunamadı: " + student);
-        }
-
-        // 2. DOM'un güncellenmesi için kısa bir süre bekle (React/Vue için)
-        setTimeout(() => {
-            let inputs = Array.from(document.querySelectorAll('input')).filter(i => {
-                if(['hidden', 'checkbox', 'radio', 'search', 'submit', 'button'].includes(i.type)) return false;
-                if(i.placeholder && i.placeholder.toLowerCase().includes('ara')) return false;
-                // Readonly veya disabled inputları atla (isim soyisim inputu vb. olabilir)
-                if(i.readOnly || i.disabled) return false;
-                return true;
-            });
-
-            // Genellikle sayfadaki not inputları en sonda yer alır.
-            // Eğer input sayısı not sayısından fazlaysa (örneğin üstte bir arama çubuğu varsa),
-            // input listesinin sonundan not sayısı kadar olan kısmı alıyoruz.
-            if(inputs.length > scores.length) {
-                inputs = inputs.slice(inputs.length - scores.length);
-            }
-
-            if(inputs.length < scores.length) {
-                console.warn("Sayfada yeterli input alanı bulunamadı! Beklenen: " + scores.length + ", Bulunan: " + inputs.length);
-            }
-
-            let filled = 0;
-            for(let i=0; i<scores.length; i++) {
-                if(inputs[i]) {
-                    // React Hack: React'ın state'ini güncelleyebilmesi için native setter'ı kullan
-                    const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
-                    if (nativeInputValueSetter) {
-                        nativeInputValueSetter.call(inputs[i], scores[i]);
-                    } else {
-                        inputs[i].value = scores[i];
-                    }
-
-                    inputs[i].dispatchEvent(new Event('input', { bubbles: true }));
-                    inputs[i].dispatchEvent(new Event('change', { bubbles: true }));
-                    // Vue veya bazı custom framework'ler için blur/focus eventleri de tetiklenebilir
-                    inputs[i].dispatchEvent(new Event('blur', { bubbles: true }));
-                    filled++;
-                }
-            }
-
-            btn.innerHTML = "DOLDURULDU ✓";
-            btn.style.background = "#3b82f6";
-            setTimeout(() => {
-                btn.innerHTML = "DOLDUR";
-                btn.style.background = "#10b981";
-            }, 1500);
-        }, 800); // 800ms bekle
-    }
-
-    // Hem butona basınca hem de seçilen öğrenci değişince otomatik çalıştır
-    document.getElementById('hdp-fill-btn').addEventListener('click', fillStudentData);
-    document.getElementById('hdp-student-select').addEventListener('change', fillStudentData);
-})();
-            `;
-
-            document.getElementById('exportCodeText').value = codeString;
-            document.getElementById('exportCodeModal').classList.remove('hidden');
-            document.getElementById('exportCodeModal').classList.add('flex');
-        }
-
-        function copyExportCode() {
-            navigator.clipboard.writeText(document.getElementById("exportCodeText").value);
-            alert("Kod panoya kopyalandı! Okul sitesine gidip F12 ile konsolu açın ve yapıştırın.");
-        }
     </script>
+
+    <!-- Toast Bildirimi -->
+    <div id="toastNotification" class="fixed top-5 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white px-6 py-3 rounded-full shadow-2xl z-[1000] font-bold text-sm transition-all duration-300 opacity-0 pointer-events-none flex items-center gap-2">
+        <i class="fas fa-info-circle text-blue-400"></i> <span id="toastText"></span>
+    </div>
+
+    <!-- Hızlı Okuma Paneli (Yapıştırınca açılır) -->
+    <div id="quickReadPanel" class="fixed bottom-4 right-4 bg-white/95 backdrop-blur-md p-4 rounded-2xl shadow-2xl border border-blue-200 z-[90] hidden flex-col w-64 transition-all duration-300 transform scale-95 origin-bottom-right">
+        <div class="flex justify-between items-center border-b pb-2 mb-2 border-blue-100">
+            <h4 class="font-black text-blue-800 text-sm truncate" id="qrStudentName"></h4>
+            <button onclick="document.getElementById('quickReadPanel').classList.add('hidden')" class="text-slate-400 hover:text-red-500"><i class="fas fa-times"></i></button>
+        </div>
+        <p class="text-xs text-slate-500 font-bold mb-2 uppercase" id="qrSubjectName"></p>
+        <div id="qrScoresList" class="flex flex-col gap-1.5 max-h-64 overflow-y-auto hide-scrollbar">
+            <!-- Puanlar buraya -->
+        </div>
+        <div class="mt-3 pt-2 border-t border-blue-100 text-right">
+            <span class="text-xs font-bold text-slate-500">TOPLAM:</span>
+            <span class="text-lg font-black text-blue-600" id="qrTotalScore">0</span>
+        </div>
+    </div>
+
 </body>
 </html>
