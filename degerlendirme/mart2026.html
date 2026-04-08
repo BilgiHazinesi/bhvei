@@ -28,8 +28,8 @@
 
         .action-btn { display: flex; align-items: center; justify-content: center; font-weight: 800; border-radius: 8px; transition: all 0.1s; border: 2px solid transparent; height: 50px; box-shadow: 0 2px 3px rgba(0,0,0,0.05); font-size: 1rem; }
         .action-btn:active { transform: scale(0.96); }
-        .score-strip { display: flex; width: 100%; gap: 6px; margin-top: 8px; }
-        .strip-btn { flex: 1; height: 38px; border-radius: 6px; font-weight: bold; font-size: 1rem; background: white; border: 1px solid #cbd5e1; color: #64748b; display: flex; align-items: center; justify-content: center; transition: all 0.1s; }
+        .score-strip { display: flex; width: 100%; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+        .strip-btn { flex: 1; min-width: 32px; height: 38px; border-radius: 6px; font-weight: bold; font-size: 1rem; background: white; border: 1px solid #cbd5e1; color: #64748b; display: flex; align-items: center; justify-content: center; transition: all 0.1s; }
         .strip-btn:hover { background: #e2e8f0; color: #0f172a; }
         .strip-btn.active { background-color: #2563eb; color: white; border-color: #1d4ed8; box-shadow: 0 2px 4px rgba(37, 99, 235, 0.3); font-size: 1.1rem; }
         .multi-part-row { background: #e2e8f0; padding: 12px; border-radius: 10px; margin-bottom: 12px; border: 1px solid #cbd5e1; }
@@ -94,6 +94,8 @@
                         </div>
 
                         <button onclick="openDataModal()" class="bg-slate-700 text-white px-2.5 py-1.5 rounded-lg font-bold text-xs shadow-sm hover:bg-slate-800 flex items-center gap-1.5 transition active:scale-95" title="JSON Yükle"><i class="fas fa-file-import"></i></button>
+
+                        <button onclick="openExportCodeModal()" class="bg-indigo-600 text-white px-2.5 py-1.5 rounded-lg font-bold text-xs shadow-sm hover:bg-indigo-700 flex items-center gap-1.5 transition active:scale-95"><i class="fas fa-code"></i> <span class="hidden sm:inline">Okul Sitesine Aktar</span></button>
 
                         <button onclick="openClassReport()" class="bg-teal-600 text-white px-2.5 py-1.5 rounded-lg font-bold text-xs shadow-sm hover:bg-teal-700 flex items-center gap-1.5 transition active:scale-95"><i class="fas fa-chart-bar"></i> <span class="hidden sm:inline">Özet</span></button>
                         <button onclick="openEditModal()" class="bg-slate-600 text-white px-2.5 py-1.5 rounded-lg font-bold text-xs shadow-sm hover:bg-slate-700 flex items-center gap-1.5 transition active:scale-95"><i class="fas fa-list"></i> <span class="hidden sm:inline">Liste</span></button>
@@ -202,6 +204,18 @@
         </div>
     </div>
 
+    <div id="exportCodeModal" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-[60] backdrop-blur-sm">
+        <div class="bg-white p-8 rounded-3xl w-full max-w-2xl shadow-2xl">
+            <h3 class="font-bold mb-2 text-xl text-slate-800 flex items-center gap-2"><i class="fas fa-code text-indigo-500 text-2xl"></i> Okul Sitesine Aktar</h3>
+            <p class="text-xs text-slate-500 mb-4">Aşağıdaki kodu kopyalayın, okul sitesine gidin, <b>F12 (Console)</b> açın ve yapıştırıp <b>Enter</b>'a basın.</p>
+            <textarea id="exportCodeText" class="w-full h-[300px] border-2 p-4 rounded-xl text-[11px] font-mono bg-slate-900 text-green-400 focus:border-indigo-500 outline-none resize-y leading-relaxed" readonly></textarea>
+            <div class="mt-6 flex gap-3">
+                <button onclick="copyExportCode()" class="flex-1 bg-indigo-500 text-white py-3 rounded-xl font-bold hover:bg-indigo-600 shadow-lg transition flex items-center justify-center gap-2"><i class="fas fa-copy"></i> Kodu Kopyala</button>
+                <button onclick="document.getElementById('exportCodeModal').classList.add('hidden'); document.getElementById('exportCodeModal').classList.remove('flex')" class="flex-1 bg-slate-200 text-slate-700 py-3 rounded-xl font-bold hover:bg-slate-300 transition">Kapat</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         const firebaseConfig = {
             apiKey: "AIzaSyCzWg0ArosPt_O4t-veaqD8HdiSR9ygvFw",
@@ -225,55 +239,58 @@
 
         const questionsData = {
             TR: [
-                { id: 't1', title: '1. Mevsimi Belirleme ve Kanıtlama', max: 12, type: 'score', step: 1, desc: 'Metindeki betimlemelerden anlatılan mevsimi doğru belirler.' },
-                { id: 't2', title: '2. Çıkarım Yapma ve Kanıt Gösterme', max: 12, type: 'score', step: 1, desc: 'Metindeki beden dili ve davranışlardan kahramanın duygularını analiz eder.' },
-                { id: 't3', title: '3. Neden-Sonuç İlişkisi Kurma', max: 12, type: 'score', step: 4, desc: 'Duygu değişimine sebep olan durumu doğru tespit eder.' },
-                { id: 't4', title: '4. Kelimede Anlam Türleri', max: 8, type: 'multi', parts:[{l:'Cam', v:2}, {l:'Perde', v:2}, {l:'Nota', v:2}, {l:'Dik Açı', v:2}], desc: 'Gerçek, mecaz veya terim anlamları ayırt eder.' },
-                { id: 't5', title: '5. Deyimler ve Mecaz Anlam', max: 10, type: 'multi', parts:[{l:'Anlamı', v:5}, {l:'Anlam Türü', v:5}], desc: '"iç geçirmek" ifadesini açıklar.' },
-                { id: 't6', title: '6. Yabancı Kelimelerin Türkçe Karşılıkları', max: 10, type: 'multi', parts:[{l:'Start (Başlat)', v:5}, {l:'Link (Bağlantı)', v:5}], desc: 'Yabancı kelimelerin Türkçe karşılıklarını bulur.' },
-                { id: 't7', title: '7. "de" ve "ki" Bağlaçlarının Yazımı', max: 10, type: 'multi', parts:[{l:'"de" Bağlacı', v:5}, {l:'"ki" Bağlacı', v:5}], desc: 'Bağlaçlardaki yazım hatalarını tespit eder.' },
-                { id: 't8', title: '8. Noktalama İşaretleri', max: 7, type: 'multi', parts:[{l:'Tırnak İşaretleri', v:2}, {l:'Ünlem ve Soru', v:2}, {l:'Virgül ve Nokta', v:3}], desc: 'Cümledeki boşluklara uygun noktalama işaretlerini yerleştirir.' },
-                { id: 't9', title: '9. Atasözü ve Metin İlişkilendirmesi', max: 10, type: 'score', step: 1, desc: '"Can çıkar, huy çıkmaz" atasözünü yorumlar.' },
-                { id: 't10', title: '10. Hikâye Unsurları', max: 9, type: 'multi', parts:[{l:'Kişi', v:3}, {l:'Yer', v:3}, {l:'Olay', v:3}], desc: 'Temel hikâye unsurlarını çözümler.' }
+                { id: 't1_3', title: 'Türkçe 1-3.Sorular', max: 36, type: 'score', step: 1, desc: 'Türkçe 1, 2 ve 3. soruların toplam puanı.' },
+                { id: 't4_5', title: 'Türkçe 4-5.Sorular', max: 18, type: 'score', step: 1, desc: 'Türkçe 4 ve 5. soruların toplam puanı.' },
+                { id: 't6', title: 'Türkçe 6.Soru', max: 10, type: 'score', step: 1, desc: 'Türkçe 6. soru puanı.' },
+                { id: 't7', title: 'Türkçe 7.Soru', max: 10, type: 'score', step: 1, desc: 'Türkçe 7. soru puanı.' },
+                { id: 't8', title: 'Türkçe 8.Soru', max: 7, type: 'score', step: 1, desc: 'Türkçe 8. soru puanı.' },
+                { id: 't9', title: 'Türkçe 9.Soru', max: 10, type: 'score', step: 1, desc: 'Türkçe 9. soru puanı.' },
+                { id: 't10', title: 'Türkçe 10.Soru', max: 9, type: 'score', step: 1, desc: 'Türkçe 10. soru puanı.' }
             ],
             MAT: [
-                { id: 'm1', title: '1. Çok Adımlı Çözüm (Baraj)', max: 10, type: 'multi', parts:[{l:'Mevcut Suyu Bulma', v:5}, {l:'İhtiyacı Hesaplama', v:5}], desc: 'Doğal sayılarla çok adımlı işlemleri çözer.' },
-                { id: 'm2', title: '2. Çarpma Problemi (Otel)', max: 10, type: 'multi', parts:[{l:'Toplam Oda Sayısı', v:5}, {l:'Toplam Ampul Sayısı', v:5}], desc: 'İki aşamalı çarpma problemlerini analiz eder.' },
-                { id: 'm3', title: '3. Bölme Problemi (Forma)', max: 10, type: 'score', step: 5, desc: 'Bölme işlemini günlük hayat durumlarına uygular.' },
-                { id: 'm4', title: '4. Kesir Tablosu Doldurma', max: 20, type: 'multi', parts:[{l:'Bileşik Kesir Model', v:4}, {l:'Basit Kesir Çeşidi', v:4}, {l:'Basit Kesir Model', v:4}, {l:'Tam Sayılı Çeşidi', v:4}, {l:'Tam Sayılı Okunuş', v:4}], desc: 'Kesir çeşitlerini ve görselleri ilişkilendirir.' },
-                { id: 'm5', title: '5. Birim Kesirleri Sıralama', max: 10, type: 'multi', parts:[{l:'Doğru Kesirleri Yazma', v:6}, {l:'Küçükten Büyüğe Sıralama', v:4}], desc: 'Birim kesirleri sıralar.' },
-                { id: 'm6', title: '6. Kesirleri Sıralama (Gezegenler)', max: 5, type: 'score', step: 1, desc: 'Paydaları eşit kesirleri karşılaştırır.' },
-                { id: 'm7', title: '7. Kesirlerde Toplama', max: 5, type: 'score', step: 1, desc: 'Paydaları eşit kesirlerle toplama yapar.' },
-                { id: 'm8', title: '8. Kesirlerde Çıkarma', max: 5, type: 'score', step: 1, desc: 'Paydaları eşit kesirlerle çıkarma yapar.' },
-                { id: 'm9', title: '9. Kesir Kadarı (Robot Ağırlığı)', max: 5, type: 'score', step: 1, desc: 'Bütünün belirtilen basit kesir kadarını bulur.' },
-                { id: 'm10', title: '10. Zaman Dönüşümü (Film)', max: 5, type: 'multi', parts:[{l:'Süreleri Dakikaya Çevirme', v:3}, {l:'En Kısa Filmi İşaretleme', v:2}], desc: 'Zaman ölçülerini birbirine çevirir.' },
-                { id: 'm11', title: '11. Zaman Ölçme (Film Bitişi)', max: 5, type: 'score', step: 1, desc: 'Varış/bitiş saati problemlerini hesaplar.' },
-                { id: 'm12', title: '12. Sütun Grafiği (Sıcaklık Farkı)', max: 4, type: 'multi', parts:[{l:'Max-Min Değer Belirleme', v:2}, {l:'Farkı Hesaplama', v:2}], desc: 'Grafikteki verilere göre fark hesaplar.' },
-                { id: 'm13', title: '13. Sütun Grafiği Yorumlama', max: 6, type: 'score', step: 2, desc: 'Grafiği şartlara göre analiz eder.' }
+                { id: 'm1', title: 'Matematik 1.Soru', max: 10, type: 'score', step: 1, desc: 'Matematik 1. soru puanı.' },
+                { id: 'm2', title: 'Matematik 2.Soru', max: 10, type: 'score', step: 1, desc: 'Matematik 2. soru puanı.' },
+                { id: 'm3', title: 'Matematik 3.Soru', max: 10, type: 'score', step: 1, desc: 'Matematik 3. soru puanı.' },
+                { id: 'm4', title: 'Matematik 4.Soru', max: 20, type: 'score', step: 1, desc: 'Matematik 4. soru puanı.' },
+                { id: 'm5', title: 'Matematik 5.Soru', max: 10, type: 'score', step: 1, desc: 'Matematik 5. soru puanı.' },
+                { id: 'm6', title: 'Matematik 6.Soru', max: 5, type: 'score', step: 1, desc: 'Matematik 6. soru puanı.' },
+                { id: 'm7', title: 'Matematik 7.Soru', max: 5, type: 'score', step: 1, desc: 'Matematik 7. soru puanı.' },
+                { id: 'm8', title: 'Matematik 8.Soru', max: 5, type: 'score', step: 1, desc: 'Matematik 8. soru puanı.' },
+                { id: 'm9', title: 'Matematik 9.Soru', max: 5, type: 'score', step: 1, desc: 'Matematik 9. soru puanı.' },
+                { id: 'm10', title: 'Matematik 10.Soru', max: 5, type: 'score', step: 1, desc: 'Matematik 10. soru puanı.' },
+                { id: 'm11', title: 'Matematik 11.Soru', max: 5, type: 'score', step: 1, desc: 'Matematik 11. soru puanı.' },
+                { id: 'm12_13', title: 'Matematik 12-13.Sorular', max: 10, type: 'score', step: 1, desc: 'Matematik 12 ve 13. soruların toplam puanı.' }
             ],
             FEN: [
-                { id: 'f1', title: '1. Kütle Ölçümü (Beher ve Sıvı)', max: 10, type: 'multi', parts:[{l:'Brüt Kütle', v:2}, {l:'Dönüşüm', v:3}, {l:'Net Kütle', v:5}], desc: 'Net kütleyi hesaplar.' },
-                { id: 'f2', title: '2. Mıknatıslar ve Yaylar', max: 8, type: 'multi', parts:[{l:'Doğru Yaylar', v:4}, {l:'Neden', v:4}], desc: 'Mıknatıs kutuplarını açıklar.' },
-                { id: 'f3', title: '3. Doğru/Yanlış Etkinliği', max: 15, type: 'multi', parts:[{l:'Kuvvet', v:3}, {l:'Gramafon', v:3}, {l:'Zıt Kutuplar', v:3}, {l:'Gazlar', v:3}, {l:'Donma', v:3}], desc: 'Bilimsel kavramları ayırt eder.' },
-                { id: 'f4', title: '4. Boşluk Doldurma', max: 15, type: 'multi', parts:[{l:'Şekil', v:3}, {l:'Gaz', v:3}, {l:'Hacim', v:3}, {l:'Donma', v:3}, {l:'Kaset', v:3}], desc: 'Terimleri bağlamına uygun kullanır.' },
-                { id: 'f5', title: '5. Saf Madde ve Karışım Tablosu', max: 10, type: 'multi', parts:[{l:'Limonata', v:2}, {l:'Çeşme Suyu', v:2}, {l:'Hava', v:2}, {l:'Demir', v:2}, {l:'Tuz', v:2}], desc: 'Maddeleri sınıflandırır.' },
-                { id: 'f6', title: '6. Karışımları Ayırma Yöntemleri', max: 20, type: 'multi', parts:[{l:'Eleme', v:4}, {l:'Süzme', v:4}, {l:'Mıknatıs', v:4}, {l:'Buharlaştırma', v:4}, {l:'Eleme 2', v:4}], desc: 'Ayırma yöntemlerini belirler.' },
-                { id: 'f7', title: '7. Aydınlatma Teknolojileri', max: 12, type: 'multi', parts:[{l:'Gaz Yağı', v:2}, {l:'LED', v:2}, {l:'Ateş', v:2}, {l:'Floresan', v:2}, {l:'Meşale', v:2}, {l:'Ampul', v:2}], desc: 'Aydınlatma gelişimini tanır.' },
-                { id: 'f8', title: '8. Işık Kirliliği ve Doğal Yaşam', max: 10, type: 'score', step: 3, desc: 'Işık kirliliğinin etkilerini yorumlar.' }
+                { id: 'f1', title: 'Fen Bilimleri 1.Soru', max: 10, type: 'score', step: 1, desc: 'Fen Bilimleri 1. soru puanı.' },
+                { id: 'f2', title: 'Fen Bilimleri 2.Soru', max: 8, type: 'score', step: 1, desc: 'Fen Bilimleri 2. soru puanı.' },
+                { id: 'f3_1', title: 'Fen Bilimleri 3.Soru_1', max: 3, type: 'score', step: 1, desc: 'Fen Bilimleri 3. soru 1. bölüm puanı.' },
+                { id: 'f3_2', title: 'Fen Bilimleri 3.Soru_2', max: 3, type: 'score', step: 1, desc: 'Fen Bilimleri 3. soru 2. bölüm puanı.' },
+                { id: 'f3_3', title: 'Fen Bilimleri 3.Soru_3', max: 3, type: 'score', step: 1, desc: 'Fen Bilimleri 3. soru 3. bölüm puanı.' },
+                { id: 'f3_4', title: 'Fen Bilimleri 3.Soru_4', max: 3, type: 'score', step: 1, desc: 'Fen Bilimleri 3. soru 4. bölüm puanı.' },
+                { id: 'f3_5', title: 'Fen Bilimleri 3.Soru_5', max: 3, type: 'score', step: 1, desc: 'Fen Bilimleri 3. soru 5. bölüm puanı.' },
+                { id: 'f4_1', title: 'Fen Bilimleri 4.Soru_1', max: 3, type: 'score', step: 1, desc: 'Fen Bilimleri 4. soru 1. bölüm puanı.' },
+                { id: 'f4_2', title: 'Fen Bilimleri 4.Soru_2', max: 3, type: 'score', step: 1, desc: 'Fen Bilimleri 4. soru 2. bölüm puanı.' },
+                { id: 'f4_3', title: 'Fen Bilimleri 4.Soru_3', max: 3, type: 'score', step: 1, desc: 'Fen Bilimleri 4. soru 3. bölüm puanı.' },
+                { id: 'f4_4', title: 'Fen Bilimleri 4.Soru_4', max: 3, type: 'score', step: 1, desc: 'Fen Bilimleri 4. soru 4. bölüm puanı.' },
+                { id: 'f4_5', title: 'Fen Bilimleri 4.Soru_5', max: 3, type: 'score', step: 1, desc: 'Fen Bilimleri 4. soru 5. bölüm puanı.' },
+                { id: 'f5', title: 'Fen Bilimleri 5.Soru', max: 15, type: 'score', step: 1, desc: 'Fen Bilimleri 5. soru puanı.' },
+                { id: 'f6', title: 'Fen Bilimleri 6.Soru', max: 15, type: 'score', step: 1, desc: 'Fen Bilimleri 6. soru puanı.' },
+                { id: 'f7', title: 'Fen Bilimleri 7.Soru', max: 12, type: 'score', step: 1, desc: 'Fen Bilimleri 7. soru puanı.' },
+                { id: 'f8', title: 'Fen Bilimleri 8.Soru', max: 10, type: 'score', step: 1, desc: 'Fen Bilimleri 8. soru puanı.' }
             ],
             SOS: [
-                { id: 's1', title: '1. Millî Kültür Ögeleri', max: 8, type: 'score', step: 2, desc: 'Kültürel ögeleri ayırt eder.' },
-                { id: 's2', title: '2. Geçmişten Günümüze Oyunlar', max: 8, type: 'score', step: 2, desc: 'Çocuk oyunlarındaki değişimi açıklar.' },
-                { id: 's3', title: '3. Kültürel Süreklilik', max: 4, type: 'score', step: 2, desc: 'Kültürel sürekliliği bularak açıklar.' },
-                { id: 's4', title: '4. Güneşe Göre Yön Bulma', max: 10, type: 'score', step: 5, desc: 'Doğada yön bulma becerisini gösterir.' },
-                { id: 's5', title: '5. Millî Mücadele Haritası', max: 18, type: 'multi', parts: [{l:'Samsun', v:3}, {l:'Havza', v:3}, {l:'Amasya', v:3}, {l:'Erzurum', v:3}, {l:'Sivas', v:3}, {l:'Ankara', v:3}], desc: 'Kronolojik ve mekânsal algısını gösterir.' },
-                { id: 's6', title: '6. Kroki Üzerinde Yönler', max: 8, type: 'multi', parts: [{l:'Batı', v:2}, {l:'Doğu', v:2}, {l:'Kuzey', v:2}, {l:'Batı 2', v:2}], desc: 'Binaların konumlarını doğru ifade eder.' },
-                { id: 's7', title: '7. Doğal ve Beşerî Unsurlar', max: 12, type: 'multi', parts: [{l:'Doğal 1', v:3}, {l:'Doğal 2', v:3}, {l:'Beşerî 1', v:3}, {l:'Beşerî 2', v:3}], desc: 'Unsurları birbirinden ayırt eder.' },
-                { id: 's8', title: '8. İlgi, İhtiyaç ve Yetenek', max: 6, type: 'multi', parts: [{l:'İlgi', v:2}, {l:'İhtiyaç', v:2}, {l:'Yetenek', v:2}], desc: 'Kavramları günlük yaşamla eşleştirir.' },
-                { id: 's9', title: '9. İstek ve İhtiyaç Önceliği', max: 4, type: 'score', step: 2, desc: 'İhtiyaç önceliğini açıklar.' },
-                { id: 's10', title: '10. Engellilere Yönelik Empati', max: 6, type: 'score', step: 2, desc: 'Empati ve farkındalığı yorumlar.' },
-                { id: 's11', title: '11. Çocuk Hakları', max: 6, type: 'multi', parts: [{l:'Hak 1', v:2}, {l:'Hak 2', v:2}, {l:'Hak 3', v:2}], desc: 'Temel çocuk haklarını sıralar.' },
-                { id: 's12', title: '12. Yaşa Uygun Sorumluluklar', max: 10, type: 'multi', parts: [{l:'Yem Verme', v:2}, {l:'Sepete Atma', v:2}, {l:'Yardım Etme', v:2}, {l:'Çanta', v:2}, {l:'Çöp', v:2}], desc: 'Sorumlulukları sınıflandırır.' }
+                { id: 's1', title: 'Sosyal Bilgiler 1.Soru', max: 8, type: 'score', step: 1, desc: 'Sosyal Bilgiler 1. soru puanı.' },
+                { id: 's2', title: 'Sosyal Bilgiler 2.Soru', max: 8, type: 'score', step: 1, desc: 'Sosyal Bilgiler 2. soru puanı.' },
+                { id: 's3', title: 'Sosyal Bilgiler 3.Soru', max: 4, type: 'score', step: 1, desc: 'Sosyal Bilgiler 3. soru puanı.' },
+                { id: 's4', title: 'Sosyal Bilgiler 4.Soru', max: 10, type: 'score', step: 1, desc: 'Sosyal Bilgiler 4. soru puanı.' },
+                { id: 's5', title: 'Sosyal Bilgiler 5.Soru', max: 18, type: 'score', step: 1, desc: 'Sosyal Bilgiler 5. soru puanı.' },
+                { id: 's6', title: 'Sosyal Bilgiler 6.Soru', max: 8, type: 'score', step: 1, desc: 'Sosyal Bilgiler 6. soru puanı.' },
+                { id: 's7', title: 'Sosyal Bilgiler 7.Soru', max: 12, type: 'score', step: 1, desc: 'Sosyal Bilgiler 7. soru puanı.' },
+                { id: 's8_9', title: 'Sosyal Bilgiler 8-9.Sorular', max: 10, type: 'score', step: 1, desc: 'Sosyal Bilgiler 8 ve 9. soruların toplam puanı.' },
+                { id: 's10', title: 'Sosyal Bilgiler 10.Soru', max: 6, type: 'score', step: 1, desc: 'Sosyal Bilgiler 10. soru puanı.' },
+                { id: 's11', title: 'Sosyal Bilgiler 11.Soru', max: 6, type: 'score', step: 1, desc: 'Sosyal Bilgiler 11. soru puanı.' },
+                { id: 's12', title: 'Sosyal Bilgiler 12.Soru', max: 10, type: 'score', step: 1, desc: 'Sosyal Bilgiler 12. soru puanı.' }
             ]
         };
 
@@ -949,6 +966,115 @@
             classMasterData.students = list;
             document.getElementById('editModal').classList.add('hidden');
             syncToCloud(); alert(`${activeClass} Şubesi ana listesi güncellendi.`);
+        }
+
+        function openExportCodeModal() {
+            const subjectFullNames = { TR:'TÜRKÇE', MAT:'MATEMATİK', FEN:'FEN BİLİMLERİ', SOS:'SOSYAL BİLGİLER' };
+            const subTitle = subjectFullNames[activeSubject];
+
+            const sortedStudents = [...classMasterData.students].sort((a,b)=>a.localeCompare(b,'tr'));
+            let extractData = {};
+
+            sortedStudents.forEach(st => {
+                const data = (classMasterData.scores[st] && classMasterData.scores[st][activeSubject]) ? classMasterData.scores[st][activeSubject] : {};
+                let studentScores = [];
+                questionsData[activeSubject].forEach(q => {
+                    studentScores.push(calculateSafeScore(data, q));
+                });
+                extractData[st] = studentScores;
+            });
+
+            const codeString = `
+(function(){
+    const data = ${JSON.stringify(extractData)};
+    const className = "${activeClass}";
+    const subjectName = "${subTitle}";
+
+    // If a panel already exists, remove it
+    const existing = document.getElementById('hdp-auto-panel');
+    if(existing) existing.remove();
+
+    const panel = document.createElement('div');
+    panel.id = 'hdp-auto-panel';
+    panel.style.cssText = "position:fixed; top:20px; right:20px; background:#1e293b; color:white; padding:20px; border-radius:12px; z-index:999999; font-family:sans-serif; box-shadow:0 10px 25px rgba(0,0,0,0.5); width:300px; border:2px solid #3b82f6;";
+
+    let html = '<h3 style="margin:0 0 10px 0; font-size:16px; color:#60a5fa;">🚀 Hızlı Değerlendirme Pro</h3>';
+    html += '<p style="margin:0 0 15px 0; font-size:13px; color:#cbd5e1;">Şube: <b>' + className + '</b> | Ders: <b>' + subjectName + '</b></p>';
+
+    html += '<select id="hdp-student-select" style="width:100%; padding:10px; margin-bottom:15px; border-radius:6px; background:#0f172a; color:white; border:1px solid #475569; font-size:14px; outline:none;">';
+    html += '<option value="">-- Öğrenci Seçin --</option>';
+
+    for(let student in data) {
+        let scores = data[student];
+        // Sadece tüm puanları girilmiş (ya da hepsi sıfır olmayan vb.) kişileri göstermek isterseniz buraya şart koyabilirsiniz.
+        // Şimdilik herkesi ekliyoruz.
+        html += '<option value="' + student + '">' + student + '</option>';
+    }
+
+    html += '</select>';
+
+    html += '<div style="display:flex; gap:10px;">';
+    html += '<button id="hdp-fill-btn" style="flex:1; background:#10b981; color:white; border:none; padding:10px; border-radius:6px; font-weight:bold; cursor:pointer; font-size:14px;">DOLDUR</button>';
+    html += '<button id="hdp-close-btn" style="flex:0.5; background:#ef4444; color:white; border:none; padding:10px; border-radius:6px; font-weight:bold; cursor:pointer; font-size:14px;">KAPAT</button>';
+    html += '</div>';
+
+    panel.innerHTML = html;
+    document.body.appendChild(panel);
+
+    document.getElementById('hdp-close-btn').addEventListener('click', () => panel.remove());
+
+    document.getElementById('hdp-fill-btn').addEventListener('click', () => {
+        const student = document.getElementById('hdp-student-select').value;
+        if(!student) return alert("Lütfen bir öğrenci seçin!");
+
+        const scores = data[student];
+        // Sayfadaki input alanlarını buluyoruz (text ve number olanlar)
+        // Okul sitesindeki inputları hedefliyoruz.
+        const inputs = Array.from(document.querySelectorAll('input[type="text"], input[type="number"]')).filter(i => {
+            // Sadece sayı girilebilecek genişlikteki/özellikteki inputları ayıklamak için
+            // Okul sitesindeki özel bir class'ı veya özelliği buraya ekleyebilirsiniz,
+            // Şimdilik sayfada sadece not girilen inputların olduğunu varsayıyoruz (veya ilk X tanesini alıyoruz)
+            return true;
+        });
+
+        if(inputs.length < scores.length) {
+            alert("Sayfada yeterli input alanı bulunamadı! Beklenen: " + scores.length + ", Bulunan: " + inputs.length);
+        }
+
+        let filled = 0;
+        for(let i=0; i<scores.length; i++) {
+            if(inputs[i]) {
+                inputs[i].value = scores[i];
+                // Event trigger'ları, React/Vue vb. algılasın diye
+                inputs[i].dispatchEvent(new Event('input', { bubbles: true }));
+                inputs[i].dispatchEvent(new Event('change', { bubbles: true }));
+                filled++;
+            }
+        }
+
+        // Kaydet butonunu otomatik tıkla (Opsiyonel)
+        // const saveBtn = document.querySelector('button.kaydet-butonu-class');
+        // if(saveBtn) saveBtn.click();
+
+        // alert("Başarılı! " + filled + " input alanı dolduruldu.");
+        document.getElementById('hdp-fill-btn').innerHTML = "DOLDURULDU ✓";
+        document.getElementById('hdp-fill-btn').style.background = "#3b82f6";
+        setTimeout(() => {
+            document.getElementById('hdp-fill-btn').innerHTML = "DOLDUR";
+            document.getElementById('hdp-fill-btn').style.background = "#10b981";
+        }, 1500);
+    });
+})();
+            `;
+
+            document.getElementById('exportCodeText').value = codeString;
+            document.getElementById('exportCodeModal').classList.remove('hidden');
+            document.getElementById('exportCodeModal').classList.add('flex');
+        }
+
+        function copyExportCode() {
+            navigator.clipboard.writeText(document.getElementById("exportCodeText").value);
+            alert("Kod panoya kopyalandı! Okul sitesine gidip F12 ile konsolu açın ve yapıştırın.");
         }
     </script>
 </body>
