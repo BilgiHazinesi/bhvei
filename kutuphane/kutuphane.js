@@ -20,7 +20,9 @@ if (!firebase.apps.length) {
 }
 
 const db = firebase.database();
-const DB_REF = "/"; // Firebacse'de verilerin tutulacağı düğüm
+const auth = firebase.auth();
+let DB_REF = ""; // Dinamik olarak atanacak (örn: /classes/UID)
+let currentClassCode = "";
 
 // Global Değişkenler
 let settings = { classTarget: 500, silverLimit: 3, goldLimit: 5 };
@@ -45,7 +47,7 @@ const EXIT_CARDS = {"1":{title:"Macera Hatırası",prompt:"En unutulmaz sahne ne
 
 // --- Başlangıç ---
 window.onload = function() {
-    console.log("Sistem başlatılıyor... Firebase Entegreli Sürüm");
+    console.log("Sistem başlatılıyor... Çoklu Sınıf & Firebase Auth Sürümü");
     if(localStorage.getItem('theme') === 'dark') { document.body.classList.add('dark-mode'); document.getElementById('themeIcon').innerText = '☀️'; } else { document.getElementById('themeIcon').innerText = '🌙'; }
     
     let select = document.getElementById('exitCardSelect'); 
@@ -54,11 +56,15 @@ window.onload = function() {
         for (const [key, value] of Object.entries(EXIT_CARDS)) { let opt = document.createElement('option'); opt.value = key; opt.innerText = value.title; select.appendChild(opt); }
     }
 
-    fetchData(true);
+    // Uygulama açılışında verileri ÇEKMİYORUZ. Giriş yapıldığında çekilecek.
+    document.getElementById('loader').style.display = 'none';
 };
 
 // --- Veri Çekme (Firebase) ---
 function fetchData(isFirstLoad) {
+    document.getElementById('loader').style.display = 'block';
+    document.getElementById('loader').innerText = "Veriler Yükleniyor...";
+
     db.ref(DB_REF).once('value').then((snapshot) => {
         const data = snapshot.val() || {};
         processData(data);
@@ -66,6 +72,23 @@ function fetchData(isFirstLoad) {
             document.getElementById('loader').style.display = 'none';
             isDataLoaded = true; 
             updateUI(); 
+            document.getElementById('loginOverlay').style.display = 'none';
+            document.getElementById('appContainer').style.display = 'block';
+
+            if(loginMode === 'teacher') {
+                document.getElementById('teacherContainer').style.display = 'block';
+                document.getElementById('teacherNav').style.display = 'flex';
+                let headerCode = document.getElementById('headerClassCode');
+                if(headerCode && currentClassCode) {
+                    headerCode.innerText = `Sınıf Kodu: ${currentClassCode}`;
+                    headerCode.style.display = 'inline-block';
+                }
+            } else {
+                document.getElementById('studentContainer').style.display = 'block';
+                document.getElementById('studentNav').style.display = 'flex';
+                document.getElementById('mainTitle').innerText = "Öğrenci Paneli";
+                renderStudentPanel();
+            }
         }
     }).catch(err => {
         document.getElementById('loader').innerText = "Bağlantı Hatası! Lütfen sayfayı yenileyin.";
@@ -94,8 +117,6 @@ function processData(data) {
     bookPages = data.bookPages || {};
     
     if(data.settings) settings = { ...settings, ...data.settings };
-    if(data.auth_password) teacherPassword = data.auth_password.toString();
-    else if(data.teacherPass) teacherPassword = data.teacherPass.toString();
     
     records.sort((a,b) => parseFloat(b.id) - parseFloat(a.id));
     
@@ -370,8 +391,7 @@ function syncData() {
         books: books, 
         bookPages: bookPages, 
         records: records, 
-        settings: settings, 
-        auth_password: teacherPassword 
+        settings: settings
     };
     
     db.ref(DB_REF).set(payload).then(() => { 
@@ -401,30 +421,92 @@ function setLoginMode(mode) {
     }
 }
 
+function generateClassCode() {
+    return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
 function login() {
-    if(!isDataLoaded) return alert("Veriler yükleniyor, lütfen bekleyin...");
     if(loginMode === 'teacher') {
+        let email = document.getElementById('teacherEmail').value.trim();
         let pass = document.getElementById('appPassword').value;
-        if(String(pass).trim() === String(teacherPassword).trim()) { 
-            document.getElementById('loginOverlay').style.display = 'none';
-            document.getElementById('appContainer').style.display = 'block';
-            document.getElementById('teacherContainer').style.display = 'block';
-            document.getElementById('teacherNav').style.display = 'flex';
-            updateUI();
-        } else { alert("Hatalı Şifre!"); }
+
+        if(!email || !pass) return alert("E-posta ve şifre zorunludur.");
+
+        document.getElementById('loader').style.display = 'block';
+        document.getElementById('loader').innerText = "Giriş Yapılıyor...";
+
+        auth.signInWithEmailAndPassword(email, pass).then((userCredential) => {
+            let uid = userCredential.user.uid;
+
+            // Check for class code or generate one
+            db.ref('/teacherCodes/' + uid).once('value').then((snapshot) => {
+                if (snapshot.exists()) {
+                    currentClassCode = snapshot.val();
+                    loadClassData(uid);
+                } else {
+                    currentClassCode = generateClassCode();
+                    db.ref('/teacherCodes/' + uid).set(currentClassCode);
+                    db.ref('/classCodes/' + currentClassCode).set(uid).then(() => {
+                        loadClassData(uid);
+                    });
+                }
+            });
+        }).catch((error) => {
+            document.getElementById('loader').style.display = 'none';
+            console.error("Giriş hatası:", error);
+            if(error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+                alert("Hatalı e-posta veya şifre!");
+            } else {
+                alert("Giriş yapılamadı: " + error.message);
+            }
+        });
     } else {
+        let code = document.getElementById('classCodeInput').value.trim();
         let sPass = document.getElementById('studentLoginPass').value.trim();
-        let foundStudent = Object.keys(studentPassObj).find(key => String(studentPassObj[key]).trim() === String(sPass));
-        if(foundStudent) {
-            loggedInStudent = foundStudent;
-            document.getElementById('loginOverlay').style.display = 'none';
-            document.getElementById('appContainer').style.display = 'block';
-            document.getElementById('studentContainer').style.display = 'block';
-            document.getElementById('studentNav').style.display = 'flex';
-            document.getElementById('mainTitle').innerText = "Öğrenci Paneli";
-            renderStudentPanel();
-        } else { alert("Şifre bulunamadı!"); }
+
+        if(!code || !sPass) return alert("Sınıf kodu ve şifre zorunludur.");
+
+        document.getElementById('loader').style.display = 'block';
+        document.getElementById('loader').innerText = "Sınıf Aranıyor...";
+
+        db.ref('/classCodes/' + code).once('value').then((snapshot) => {
+            if (snapshot.exists()) {
+                let uid = snapshot.val();
+                DB_REF = '/classes/' + uid;
+
+                // Fetch only studentPass list first to verify
+                db.ref(DB_REF + '/studentPass').once('value').then((passSnapshot) => {
+                    let passes = passSnapshot.val() || {};
+                    let foundStudent = Object.keys(passes).find(key => String(passes[key]).trim() === String(sPass));
+
+                    if(foundStudent) {
+                        loggedInStudent = foundStudent;
+                        fetchData(true);
+                    } else {
+                        document.getElementById('loader').style.display = 'none';
+                        alert("Hatalı öğrenci şifresi!");
+                    }
+                });
+            } else {
+                document.getElementById('loader').style.display = 'none';
+                alert("Geçersiz Sınıf Kodu!");
+            }
+        }).catch(err => {
+            document.getElementById('loader').style.display = 'none';
+            alert("Bağlantı hatası!");
+        });
     }
+}
+
+function loadClassData(uid) {
+    DB_REF = '/classes/' + uid;
+    fetchData(true);
+}
+
+function logoutApp() {
+    auth.signOut().then(() => {
+        location.reload();
+    });
 }
 
 function lendBook() { 
@@ -639,7 +721,7 @@ function populateDatalists() {
         bl.innerHTML += `<option value="${ratingStr}${b}"></option>`;
     });
 }
-function resetAllData() { let p = prompt("TÜM VERİLERİ SİLMEK İÇİN ŞİFREYİ GİRİN:"); if(p === teacherPassword) { if(confirm("Emin misiniz? Tüm öğrenciler, kitaplar ve kayıtlar silinecek!")) { students = []; books = []; records = []; bookPages = {}; studentPassObj={}; settings = { classTarget: 500, silverLimit: 3, goldLimit: 5 }; updateUI(); syncData(); alert("Sıfırlandı."); } } else { alert("Hatalı şifre!"); } }
+function resetAllData() { let p = prompt("TÜM VERİLERİ SİLMEK İÇİN BÜYÜK HARFLERLE 'SİL' YAZIN:"); if(p === "SİL") { if(confirm("Emin misiniz? Bu sınıfın tüm öğrencileri, kitapları ve kayıtları silinecek!")) { students = []; books = []; records = []; bookPages = {}; studentPassObj={}; settings = { classTarget: 500, silverLimit: 3, goldLimit: 5 }; updateUI(); syncData(); alert("Sıfırlandı."); } } else { alert("Hatalı giriş, işlem iptal edildi."); } }
 function getMedals(count) { let goldCount = Math.floor(count / settings.goldLimit); let silverCount = Math.floor(count / settings.silverLimit); let medals = ""; for(let i=0; i<goldCount; i++) medals += "🥇"; for(let i=0; i<silverCount; i++) medals += "🥈"; return medals; }
 function getRank(count) { if(count >= 40) return "💎 EFSANE"; if(count >= 35) return "🌍 Bilge Okur"; if(count >= 30) return "🎩 Edebiyat Ustası"; if(count >= 25) return "👑 Kütüphane Muhafızı"; if(count >= 20) return "🏹 Kelime Avcısı"; if(count >= 15) return "🚀 Bilgi Kaşifi"; if(count >= 10) return "📖 Kitap Kurdu"; if(count >= 5)  return "🥉 Okuma Çırağı"; return "🌱 Başlangıç"; }
 function toggleStatsSort() { if(statsSortMode === 'book_desc') { statsSortMode = 'book_asc'; document.getElementById('sortBtnIcon').innerText = "Sırala: Kitap ⬆"; } else if (statsSortMode === 'book_asc') { statsSortMode = 'page_desc'; document.getElementById('sortBtnIcon').innerText = "Sırala: Sayfa ⬇"; } else { statsSortMode = 'book_desc'; document.getElementById('sortBtnIcon').innerText = "Sırala: Kitap ⬇"; } renderRanking(); }
@@ -654,8 +736,8 @@ function renderStudentPanel() {
     completedRecs.forEach(r => totalPages += (parseInt(bookPages[r.book]) || 0));
 
     document.getElementById('stName').innerText = loggedInStudent;
-    document.getElementById('stRank').innerText = getRank(totalBooks); 
-    document.getElementById('stMedals').innerText = getMedals(totalBooks); 
+    document.getElementById('stRank').innerText = getRank(totalBooks);
+    document.getElementById('stMedals').innerText = getMedals(totalBooks);
     document.getElementById('stBookCount').innerText = totalBooks;
     document.getElementById('stPageCount').innerText = totalPages;
 
@@ -664,13 +746,13 @@ function renderStudentPanel() {
     const listDiv = document.getElementById('studentMyBooksList');
     listDiv.innerHTML = "";
     if(myRecs.length === 0) listDiv.innerHTML = "<p style='text-align:center; opacity:0.6;'>Henüz bir macera başlamadı.</p>";
-    
+
     myRecs.sort((a,b) => parseFloat(b.id) - parseFloat(a.id));
 
     myRecs.forEach(r => {
         let statusHtml = r.status === "Okuyor" ? `<span style="color:#2563eb; font-weight:bold;">Okuyorsun</span>` : `<span style="color:#10b981; font-weight:bold;">Teslim Ettin</span>`;
         let actionBtn = "";
-        
+
         if(r.status === "İade Etti") {
             if(!r.rating) {
                 // Henüz değerlendirilmemiş -> Standart Buton
@@ -681,13 +763,13 @@ function renderStudentPanel() {
                 <div style="display:flex; flex-direction:column; align-items:flex-end; gap:3px;">
                     <span style="font-size:0.9rem; color:#f59e0b; font-weight:bold; margin-right:2px;">Puanın: ${r.rating}/5 ⭐</span>
                     <button onclick="studentRateBook('${r.id}')" style="
-                        background-color: #10b981; 
-                        color: white; 
-                        border: none; 
-                        padding: 5px 12px; 
-                        border-radius: 15px; 
-                        font-size: 0.8rem; 
-                        cursor: pointer; 
+                        background-color: #10b981;
+                        color: white;
+                        border: none;
+                        padding: 5px 12px;
+                        border-radius: 15px;
+                        font-size: 0.8rem;
+                        cursor: pointer;
                         box-shadow: 0 2px 5px rgba(16, 185, 129, 0.3);
                         display:flex; align-items:center; gap:5px;
                     ">
@@ -700,11 +782,11 @@ function renderStudentPanel() {
     });
 }
 
-function deleteRecord(id) { 
+function deleteRecord(id) {
     if(confirm("DİKKAT: Bu işlemi geri alamazsınız!\n\nBu kaydı silmek istediğinizden emin misiniz? Sadece yanlışlıkla yapılan işlemleri iptal etmek için kullanın.")) {
-        records = records.filter(r => String(r.id) !== String(id)); 
-        updateUI(); 
-        syncData(); 
+        records = records.filter(r => String(r.id) !== String(id));
+        updateUI();
+        syncData();
     }
 }function printCertificate() {
     const s = document.getElementById('reportStudentInput').value.trim().toLocaleUpperCase('tr-TR');
