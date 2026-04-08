@@ -5,6 +5,154 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hızlı Değerlendirme Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        function showToast(msg, type='info') {
+            const toast = document.getElementById('toastNotification');
+            const icon = toast.querySelector('i');
+            document.getElementById('toastText').innerText = msg;
+
+            toast.className = 'fixed top-5 left-1/2 transform -translate-x-1/2 text-white px-6 py-3 rounded-full shadow-2xl z-[1000] font-bold text-sm transition-all duration-300 flex items-center gap-2';
+
+            if(type === 'success') {
+                toast.classList.add('bg-emerald-600');
+                icon.className = 'fas fa-check-circle text-white';
+            } else if(type === 'error') {
+                toast.classList.add('bg-red-600');
+                icon.className = 'fas fa-exclamation-circle text-white';
+            } else {
+                toast.classList.add('bg-slate-800');
+                icon.className = 'fas fa-info-circle text-blue-400';
+            }
+
+            toast.style.opacity = '1';
+            toast.style.transform = 'translate(-50%, 0)';
+
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translate(-50%, -20px)';
+            }, 3000);
+        }
+
+        // Global Paste Listener
+        document.addEventListener('paste', async (e) => {
+            // Eğer kullanıcı arama kutusuna (veya textarea'ya) bilerek yapıştırıyorsa engelleme
+            const activeTag = document.activeElement.tagName.toLowerCase();
+            if (activeTag === 'textarea' || (activeTag === 'input' && document.activeElement.id !== 'searchInput')) return;
+
+            e.preventDefault(); // Varsayılan yapıştırmayı durdur
+            let pastedText = (e.clipboardData || window.clipboardData).getData('text');
+            if(!pastedText) return;
+
+            pastedText = pastedText.trim();
+            // Kullanıcı metni şöyle kopyalamış olabilir:
+            // "AHMET CEVDET KORKMAZ
+            // 4-D"
+            // Metni satırlara böl
+            const lines = pastedText.split('\n').map(l => l.trim()).filter(l => l);
+            if(lines.length === 0) return;
+
+            let extractedName = "";
+            let targetClass = activeClass; // Varsayılan olarak mevcut sınıf
+            let classChanged = false;
+
+            // Satırlarda sınıfı bulmaya çalış (ör: 4-A, 4-B, vb.)
+            for(let line of lines) {
+                let classMatch = line.match(/\b[1-4]\s*[-/]?\s*([A-D])\b/i);
+                if(classMatch) {
+                    targetClass = classMatch[1].toUpperCase();
+                    // Sınıfı bulduğumuz satırı isim olarak değerlendirme
+                } else if(line.length > 3 && !extractedName) {
+                    // İlk mantıklı uzun satırı isim kabul et
+                    extractedName = line;
+                }
+            }
+
+            // Eğer isme ulaşamadıysak doğrudan tüm yapıştırılan metni isim kabul et
+            if(!extractedName) extractedName = pastedText.replace(/\b[1-4]\s*[-/]?\s*[A-D]\b/gi, '').trim();
+
+            // İsmi temizle (başlıkları, vb.)
+            extractedName = extractedName.toLocaleUpperCase('tr').replace(/[^A-ZÇĞİÖŞÜ\s]/gi, '').trim();
+
+            if(!extractedName) {
+                showToast("Panodan geçerli bir isim bulunamadı.", 'error');
+                return;
+            }
+
+            // Sınıf değişikliği gerekiyor mu?
+            if(targetClass !== activeClass) {
+                showToast(targetClass + " şubesine geçiliyor...", 'info');
+                await bootClass(targetClass);
+                classChanged = true;
+            }
+
+            // Öğrenciyi mevcut listede ara
+            let studentsList = classMasterData.students;
+
+            // Tam eşleşme ara
+            let foundStudent = studentsList.find(s => s.toLocaleUpperCase('tr') === extractedName);
+
+            // Tam eşleşme yoksa kısmı eşleşme ara (ilk kelimeler)
+            if(!foundStudent) {
+                const words = extractedName.split(' ');
+                if(words.length >= 2) {
+                    foundStudent = studentsList.find(s => s.toLocaleUpperCase('tr').includes(words[0]) && s.toLocaleUpperCase('tr').includes(words[1]));
+                }
+            }
+
+            if(foundStudent) {
+                selectStudent(foundStudent);
+                showToast("Bulundu: " + foundStudent, 'success');
+                // Hızlı okuma panelini aç
+                document.getElementById('quickReadPanel').classList.remove('hidden');
+                document.getElementById('quickReadPanel').classList.add('flex');
+                setTimeout(() => document.getElementById('quickReadPanel').classList.remove('scale-95'), 50);
+            } else {
+                showToast("Öğrenci (" + extractedName + ") bu şubede (" + targetClass + ") bulunamadı!", 'error');
+                if(!classChanged) {
+                    document.getElementById('searchInput').value = extractedName;
+                    filterStudents();
+                }
+            }
+        });
+
+        // Hızlı Okuma Panelini Güncelleyen Fonksiyon (renderQuestions içinde çağrılacak)
+        function updateQuickReadPanel() {
+            const panel = document.getElementById('quickReadPanel');
+            if(panel.classList.contains('hidden')) return;
+
+            if(!currentStudent) return;
+
+            document.getElementById('qrStudentName').innerText = currentStudent;
+            const subjectFullNames = { TR:'TÜRKÇE', MAT:'MATEMATİK', FEN:'FEN BİLİMLERİ', SOS:'SOSYAL BİLGİLER' };
+            document.getElementById('qrSubjectName').innerText = subjectFullNames[activeSubject];
+
+            const list = document.getElementById('qrScoresList');
+            list.innerHTML = "";
+            let total = 0;
+
+            const data = (classMasterData.scores[currentStudent] && classMasterData.scores[currentStudent][activeSubject]) ? classMasterData.scores[currentStudent][activeSubject] : {};
+
+            questionsData[activeSubject].forEach((q, i) => {
+                const sc = calculateSafeScore(data, q);
+                total += sc;
+
+                // Sade görünüm: Soru 1: 36
+                const qShortTitle = q.title.split(' ')[0] + " " + (i+1); // Sadece konu ve sıra no
+
+                const item = document.createElement('div');
+                item.className = "flex justify-between items-center py-1 border-b border-dashed border-blue-100 last:border-0";
+                item.innerHTML = `
+                    <span class="text-xs text-slate-600 font-semibold truncate flex-1 pr-2" title="${q.title}">${q.title}</span>
+                    <span class="text-sm font-black ${sc === q.max ? 'text-emerald-500' : sc === 0 ? 'text-red-500' : 'text-orange-500'} bg-slate-50 px-2 py-0.5 rounded border border-slate-100 min-w-[30px] text-center">${sc}</span>
+                `;
+                list.appendChild(item);
+            });
+
+            document.getElementById('qrTotalScore').innerText = total;
+        }
+
+
+</script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -28,8 +176,8 @@
 
         .action-btn { display: flex; align-items: center; justify-content: center; font-weight: 800; border-radius: 8px; transition: all 0.1s; border: 2px solid transparent; height: 50px; box-shadow: 0 2px 3px rgba(0,0,0,0.05); font-size: 1rem; }
         .action-btn:active { transform: scale(0.96); }
-        .score-strip { display: flex; width: 100%; gap: 6px; margin-top: 8px; }
-        .strip-btn { flex: 1; height: 38px; border-radius: 6px; font-weight: bold; font-size: 1rem; background: white; border: 1px solid #cbd5e1; color: #64748b; display: flex; align-items: center; justify-content: center; transition: all 0.1s; }
+        .score-strip { display: flex; width: 100%; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+        .strip-btn { flex: 1; min-width: 32px; height: 38px; border-radius: 6px; font-weight: bold; font-size: 1rem; background: white; border: 1px solid #cbd5e1; color: #64748b; display: flex; align-items: center; justify-content: center; transition: all 0.1s; }
         .strip-btn:hover { background: #e2e8f0; color: #0f172a; }
         .strip-btn.active { background-color: #2563eb; color: white; border-color: #1d4ed8; box-shadow: 0 2px 4px rgba(37, 99, 235, 0.3); font-size: 1.1rem; }
         .multi-part-row { background: #e2e8f0; padding: 12px; border-radius: 10px; margin-bottom: 12px; border: 1px solid #cbd5e1; }
@@ -81,7 +229,7 @@
 
                     <div class="relative w-full md:max-w-md lg:max-w-lg">
                         <div class="relative h-10"> 
-                            <input type="text" id="searchInput" class="w-full h-full pl-9 pr-10 border-2 border-slate-300 rounded-lg bg-white focus:border-blue-600 focus:ring-0 font-bold text-sm outline-none shadow-sm transition" placeholder="Öğrenci Ara..." oninput="filterStudents()" onfocus="filterStudents()" autocomplete="off">
+                            <input type="text" id="searchInput" class="w-full h-full pl-9 pr-10 border-2 border-slate-300 rounded-lg bg-white focus:border-blue-600 focus:ring-0 font-bold text-sm outline-none shadow-sm transition" placeholder="Öğrenci Ara veya İsim Yapıştır (Ctrl+V)" oninput="filterStudents()" onfocus="filterStudents()" autocomplete="off">
                             <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 text-sm"></i>
                             <div class="clear-btn" onclick="clearSearch()"><i class="fas fa-times"></i></div>
                         </div>
@@ -94,6 +242,8 @@
                         </div>
 
                         <button onclick="openDataModal()" class="bg-slate-700 text-white px-2.5 py-1.5 rounded-lg font-bold text-xs shadow-sm hover:bg-slate-800 flex items-center gap-1.5 transition active:scale-95" title="JSON Yükle"><i class="fas fa-file-import"></i></button>
+
+
 
                         <button onclick="openClassReport()" class="bg-teal-600 text-white px-2.5 py-1.5 rounded-lg font-bold text-xs shadow-sm hover:bg-teal-700 flex items-center gap-1.5 transition active:scale-95"><i class="fas fa-chart-bar"></i> <span class="hidden sm:inline">Özet</span></button>
                         <button onclick="openEditModal()" class="bg-slate-600 text-white px-2.5 py-1.5 rounded-lg font-bold text-xs shadow-sm hover:bg-slate-700 flex items-center gap-1.5 transition active:scale-95"><i class="fas fa-list"></i> <span class="hidden sm:inline">Liste</span></button>
@@ -202,6 +352,8 @@
         </div>
     </div>
 
+
+
     <script>
         const firebaseConfig = {
             apiKey: "AIzaSyCzWg0ArosPt_O4t-veaqD8HdiSR9ygvFw",
@@ -225,55 +377,58 @@
 
         const questionsData = {
             TR: [
-                { id: 't1', title: '1. Mevsimi Belirleme ve Kanıtlama', max: 12, type: 'score', step: 1, desc: 'Metindeki betimlemelerden anlatılan mevsimi doğru belirler.' },
-                { id: 't2', title: '2. Çıkarım Yapma ve Kanıt Gösterme', max: 12, type: 'score', step: 1, desc: 'Metindeki beden dili ve davranışlardan kahramanın duygularını analiz eder.' },
-                { id: 't3', title: '3. Neden-Sonuç İlişkisi Kurma', max: 12, type: 'score', step: 4, desc: 'Duygu değişimine sebep olan durumu doğru tespit eder.' },
-                { id: 't4', title: '4. Kelimede Anlam Türleri', max: 8, type: 'multi', parts:[{l:'Cam', v:2}, {l:'Perde', v:2}, {l:'Nota', v:2}, {l:'Dik Açı', v:2}], desc: 'Gerçek, mecaz veya terim anlamları ayırt eder.' },
-                { id: 't5', title: '5. Deyimler ve Mecaz Anlam', max: 10, type: 'multi', parts:[{l:'Anlamı', v:5}, {l:'Anlam Türü', v:5}], desc: '"iç geçirmek" ifadesini açıklar.' },
-                { id: 't6', title: '6. Yabancı Kelimelerin Türkçe Karşılıkları', max: 10, type: 'multi', parts:[{l:'Start (Başlat)', v:5}, {l:'Link (Bağlantı)', v:5}], desc: 'Yabancı kelimelerin Türkçe karşılıklarını bulur.' },
-                { id: 't7', title: '7. "de" ve "ki" Bağlaçlarının Yazımı', max: 10, type: 'multi', parts:[{l:'"de" Bağlacı', v:5}, {l:'"ki" Bağlacı', v:5}], desc: 'Bağlaçlardaki yazım hatalarını tespit eder.' },
-                { id: 't8', title: '8. Noktalama İşaretleri', max: 7, type: 'multi', parts:[{l:'Tırnak İşaretleri', v:2}, {l:'Ünlem ve Soru', v:2}, {l:'Virgül ve Nokta', v:3}], desc: 'Cümledeki boşluklara uygun noktalama işaretlerini yerleştirir.' },
-                { id: 't9', title: '9. Atasözü ve Metin İlişkilendirmesi', max: 10, type: 'score', step: 1, desc: '"Can çıkar, huy çıkmaz" atasözünü yorumlar.' },
-                { id: 't10', title: '10. Hikâye Unsurları', max: 9, type: 'multi', parts:[{l:'Kişi', v:3}, {l:'Yer', v:3}, {l:'Olay', v:3}], desc: 'Temel hikâye unsurlarını çözümler.' }
+                { id: 't1_3', title: 'Türkçe 1-3.Sorular', max: 36, type: 'score', step: 1, desc: 'Türkçe 1, 2 ve 3. soruların toplam puanı.' },
+                { id: 't4_5', title: 'Türkçe 4-5.Sorular', max: 18, type: 'score', step: 1, desc: 'Türkçe 4 ve 5. soruların toplam puanı.' },
+                { id: 't6', title: 'Türkçe 6.Soru', max: 10, type: 'score', step: 1, desc: 'Türkçe 6. soru puanı.' },
+                { id: 't7', title: 'Türkçe 7.Soru', max: 10, type: 'score', step: 1, desc: 'Türkçe 7. soru puanı.' },
+                { id: 't8', title: 'Türkçe 8.Soru', max: 7, type: 'score', step: 1, desc: 'Türkçe 8. soru puanı.' },
+                { id: 't9', title: 'Türkçe 9.Soru', max: 10, type: 'score', step: 1, desc: 'Türkçe 9. soru puanı.' },
+                { id: 't10', title: 'Türkçe 10.Soru', max: 9, type: 'score', step: 1, desc: 'Türkçe 10. soru puanı.' }
             ],
             MAT: [
-                { id: 'm1', title: '1. Çok Adımlı Çözüm (Baraj)', max: 10, type: 'multi', parts:[{l:'Mevcut Suyu Bulma', v:5}, {l:'İhtiyacı Hesaplama', v:5}], desc: 'Doğal sayılarla çok adımlı işlemleri çözer.' },
-                { id: 'm2', title: '2. Çarpma Problemi (Otel)', max: 10, type: 'multi', parts:[{l:'Toplam Oda Sayısı', v:5}, {l:'Toplam Ampul Sayısı', v:5}], desc: 'İki aşamalı çarpma problemlerini analiz eder.' },
-                { id: 'm3', title: '3. Bölme Problemi (Forma)', max: 10, type: 'score', step: 5, desc: 'Bölme işlemini günlük hayat durumlarına uygular.' },
-                { id: 'm4', title: '4. Kesir Tablosu Doldurma', max: 20, type: 'multi', parts:[{l:'Bileşik Kesir Model', v:4}, {l:'Basit Kesir Çeşidi', v:4}, {l:'Basit Kesir Model', v:4}, {l:'Tam Sayılı Çeşidi', v:4}, {l:'Tam Sayılı Okunuş', v:4}], desc: 'Kesir çeşitlerini ve görselleri ilişkilendirir.' },
-                { id: 'm5', title: '5. Birim Kesirleri Sıralama', max: 10, type: 'multi', parts:[{l:'Doğru Kesirleri Yazma', v:6}, {l:'Küçükten Büyüğe Sıralama', v:4}], desc: 'Birim kesirleri sıralar.' },
-                { id: 'm6', title: '6. Kesirleri Sıralama (Gezegenler)', max: 5, type: 'score', step: 1, desc: 'Paydaları eşit kesirleri karşılaştırır.' },
-                { id: 'm7', title: '7. Kesirlerde Toplama', max: 5, type: 'score', step: 1, desc: 'Paydaları eşit kesirlerle toplama yapar.' },
-                { id: 'm8', title: '8. Kesirlerde Çıkarma', max: 5, type: 'score', step: 1, desc: 'Paydaları eşit kesirlerle çıkarma yapar.' },
-                { id: 'm9', title: '9. Kesir Kadarı (Robot Ağırlığı)', max: 5, type: 'score', step: 1, desc: 'Bütünün belirtilen basit kesir kadarını bulur.' },
-                { id: 'm10', title: '10. Zaman Dönüşümü (Film)', max: 5, type: 'multi', parts:[{l:'Süreleri Dakikaya Çevirme', v:3}, {l:'En Kısa Filmi İşaretleme', v:2}], desc: 'Zaman ölçülerini birbirine çevirir.' },
-                { id: 'm11', title: '11. Zaman Ölçme (Film Bitişi)', max: 5, type: 'score', step: 1, desc: 'Varış/bitiş saati problemlerini hesaplar.' },
-                { id: 'm12', title: '12. Sütun Grafiği (Sıcaklık Farkı)', max: 4, type: 'multi', parts:[{l:'Max-Min Değer Belirleme', v:2}, {l:'Farkı Hesaplama', v:2}], desc: 'Grafikteki verilere göre fark hesaplar.' },
-                { id: 'm13', title: '13. Sütun Grafiği Yorumlama', max: 6, type: 'score', step: 2, desc: 'Grafiği şartlara göre analiz eder.' }
+                { id: 'm1', title: 'Matematik 1.Soru', max: 10, type: 'score', step: 1, desc: 'Matematik 1. soru puanı.' },
+                { id: 'm2', title: 'Matematik 2.Soru', max: 10, type: 'score', step: 1, desc: 'Matematik 2. soru puanı.' },
+                { id: 'm3', title: 'Matematik 3.Soru', max: 10, type: 'score', step: 1, desc: 'Matematik 3. soru puanı.' },
+                { id: 'm4', title: 'Matematik 4.Soru', max: 20, type: 'score', step: 1, desc: 'Matematik 4. soru puanı.' },
+                { id: 'm5', title: 'Matematik 5.Soru', max: 10, type: 'score', step: 1, desc: 'Matematik 5. soru puanı.' },
+                { id: 'm6', title: 'Matematik 6.Soru', max: 5, type: 'score', step: 1, desc: 'Matematik 6. soru puanı.' },
+                { id: 'm7', title: 'Matematik 7.Soru', max: 5, type: 'score', step: 1, desc: 'Matematik 7. soru puanı.' },
+                { id: 'm8', title: 'Matematik 8.Soru', max: 5, type: 'score', step: 1, desc: 'Matematik 8. soru puanı.' },
+                { id: 'm9', title: 'Matematik 9.Soru', max: 5, type: 'score', step: 1, desc: 'Matematik 9. soru puanı.' },
+                { id: 'm10', title: 'Matematik 10.Soru', max: 5, type: 'score', step: 1, desc: 'Matematik 10. soru puanı.' },
+                { id: 'm11', title: 'Matematik 11.Soru', max: 5, type: 'score', step: 1, desc: 'Matematik 11. soru puanı.' },
+                { id: 'm12_13', title: 'Matematik 12-13.Sorular', max: 10, type: 'score', step: 1, desc: 'Matematik 12 ve 13. soruların toplam puanı.' }
             ],
             FEN: [
-                { id: 'f1', title: '1. Kütle Ölçümü (Beher ve Sıvı)', max: 10, type: 'multi', parts:[{l:'Brüt Kütle', v:2}, {l:'Dönüşüm', v:3}, {l:'Net Kütle', v:5}], desc: 'Net kütleyi hesaplar.' },
-                { id: 'f2', title: '2. Mıknatıslar ve Yaylar', max: 8, type: 'multi', parts:[{l:'Doğru Yaylar', v:4}, {l:'Neden', v:4}], desc: 'Mıknatıs kutuplarını açıklar.' },
-                { id: 'f3', title: '3. Doğru/Yanlış Etkinliği', max: 15, type: 'multi', parts:[{l:'Kuvvet', v:3}, {l:'Gramafon', v:3}, {l:'Zıt Kutuplar', v:3}, {l:'Gazlar', v:3}, {l:'Donma', v:3}], desc: 'Bilimsel kavramları ayırt eder.' },
-                { id: 'f4', title: '4. Boşluk Doldurma', max: 15, type: 'multi', parts:[{l:'Şekil', v:3}, {l:'Gaz', v:3}, {l:'Hacim', v:3}, {l:'Donma', v:3}, {l:'Kaset', v:3}], desc: 'Terimleri bağlamına uygun kullanır.' },
-                { id: 'f5', title: '5. Saf Madde ve Karışım Tablosu', max: 10, type: 'multi', parts:[{l:'Limonata', v:2}, {l:'Çeşme Suyu', v:2}, {l:'Hava', v:2}, {l:'Demir', v:2}, {l:'Tuz', v:2}], desc: 'Maddeleri sınıflandırır.' },
-                { id: 'f6', title: '6. Karışımları Ayırma Yöntemleri', max: 20, type: 'multi', parts:[{l:'Eleme', v:4}, {l:'Süzme', v:4}, {l:'Mıknatıs', v:4}, {l:'Buharlaştırma', v:4}, {l:'Eleme 2', v:4}], desc: 'Ayırma yöntemlerini belirler.' },
-                { id: 'f7', title: '7. Aydınlatma Teknolojileri', max: 12, type: 'multi', parts:[{l:'Gaz Yağı', v:2}, {l:'LED', v:2}, {l:'Ateş', v:2}, {l:'Floresan', v:2}, {l:'Meşale', v:2}, {l:'Ampul', v:2}], desc: 'Aydınlatma gelişimini tanır.' },
-                { id: 'f8', title: '8. Işık Kirliliği ve Doğal Yaşam', max: 10, type: 'score', step: 3, desc: 'Işık kirliliğinin etkilerini yorumlar.' }
+                { id: 'f1', title: 'Fen Bilimleri 1.Soru', max: 10, type: 'score', step: 1, desc: 'Fen Bilimleri 1. soru puanı.' },
+                { id: 'f2', title: 'Fen Bilimleri 2.Soru', max: 8, type: 'score', step: 1, desc: 'Fen Bilimleri 2. soru puanı.' },
+                { id: 'f3_1', title: 'Fen Bilimleri 3.Soru_1', max: 3, type: 'score', step: 1, desc: 'Fen Bilimleri 3. soru 1. bölüm puanı.' },
+                { id: 'f3_2', title: 'Fen Bilimleri 3.Soru_2', max: 3, type: 'score', step: 1, desc: 'Fen Bilimleri 3. soru 2. bölüm puanı.' },
+                { id: 'f3_3', title: 'Fen Bilimleri 3.Soru_3', max: 3, type: 'score', step: 1, desc: 'Fen Bilimleri 3. soru 3. bölüm puanı.' },
+                { id: 'f3_4', title: 'Fen Bilimleri 3.Soru_4', max: 3, type: 'score', step: 1, desc: 'Fen Bilimleri 3. soru 4. bölüm puanı.' },
+                { id: 'f3_5', title: 'Fen Bilimleri 3.Soru_5', max: 3, type: 'score', step: 1, desc: 'Fen Bilimleri 3. soru 5. bölüm puanı.' },
+                { id: 'f4_1', title: 'Fen Bilimleri 4.Soru_1', max: 3, type: 'score', step: 1, desc: 'Fen Bilimleri 4. soru 1. bölüm puanı.' },
+                { id: 'f4_2', title: 'Fen Bilimleri 4.Soru_2', max: 3, type: 'score', step: 1, desc: 'Fen Bilimleri 4. soru 2. bölüm puanı.' },
+                { id: 'f4_3', title: 'Fen Bilimleri 4.Soru_3', max: 3, type: 'score', step: 1, desc: 'Fen Bilimleri 4. soru 3. bölüm puanı.' },
+                { id: 'f4_4', title: 'Fen Bilimleri 4.Soru_4', max: 3, type: 'score', step: 1, desc: 'Fen Bilimleri 4. soru 4. bölüm puanı.' },
+                { id: 'f4_5', title: 'Fen Bilimleri 4.Soru_5', max: 3, type: 'score', step: 1, desc: 'Fen Bilimleri 4. soru 5. bölüm puanı.' },
+                { id: 'f5', title: 'Fen Bilimleri 5.Soru', max: 15, type: 'score', step: 1, desc: 'Fen Bilimleri 5. soru puanı.' },
+                { id: 'f6', title: 'Fen Bilimleri 6.Soru', max: 15, type: 'score', step: 1, desc: 'Fen Bilimleri 6. soru puanı.' },
+                { id: 'f7', title: 'Fen Bilimleri 7.Soru', max: 12, type: 'score', step: 1, desc: 'Fen Bilimleri 7. soru puanı.' },
+                { id: 'f8', title: 'Fen Bilimleri 8.Soru', max: 10, type: 'score', step: 1, desc: 'Fen Bilimleri 8. soru puanı.' }
             ],
             SOS: [
-                { id: 's1', title: '1. Millî Kültür Ögeleri', max: 8, type: 'score', step: 2, desc: 'Kültürel ögeleri ayırt eder.' },
-                { id: 's2', title: '2. Geçmişten Günümüze Oyunlar', max: 8, type: 'score', step: 2, desc: 'Çocuk oyunlarındaki değişimi açıklar.' },
-                { id: 's3', title: '3. Kültürel Süreklilik', max: 4, type: 'score', step: 2, desc: 'Kültürel sürekliliği bularak açıklar.' },
-                { id: 's4', title: '4. Güneşe Göre Yön Bulma', max: 10, type: 'score', step: 5, desc: 'Doğada yön bulma becerisini gösterir.' },
-                { id: 's5', title: '5. Millî Mücadele Haritası', max: 18, type: 'multi', parts: [{l:'Samsun', v:3}, {l:'Havza', v:3}, {l:'Amasya', v:3}, {l:'Erzurum', v:3}, {l:'Sivas', v:3}, {l:'Ankara', v:3}], desc: 'Kronolojik ve mekânsal algısını gösterir.' },
-                { id: 's6', title: '6. Kroki Üzerinde Yönler', max: 8, type: 'multi', parts: [{l:'Batı', v:2}, {l:'Doğu', v:2}, {l:'Kuzey', v:2}, {l:'Batı 2', v:2}], desc: 'Binaların konumlarını doğru ifade eder.' },
-                { id: 's7', title: '7. Doğal ve Beşerî Unsurlar', max: 12, type: 'multi', parts: [{l:'Doğal 1', v:3}, {l:'Doğal 2', v:3}, {l:'Beşerî 1', v:3}, {l:'Beşerî 2', v:3}], desc: 'Unsurları birbirinden ayırt eder.' },
-                { id: 's8', title: '8. İlgi, İhtiyaç ve Yetenek', max: 6, type: 'multi', parts: [{l:'İlgi', v:2}, {l:'İhtiyaç', v:2}, {l:'Yetenek', v:2}], desc: 'Kavramları günlük yaşamla eşleştirir.' },
-                { id: 's9', title: '9. İstek ve İhtiyaç Önceliği', max: 4, type: 'score', step: 2, desc: 'İhtiyaç önceliğini açıklar.' },
-                { id: 's10', title: '10. Engellilere Yönelik Empati', max: 6, type: 'score', step: 2, desc: 'Empati ve farkındalığı yorumlar.' },
-                { id: 's11', title: '11. Çocuk Hakları', max: 6, type: 'multi', parts: [{l:'Hak 1', v:2}, {l:'Hak 2', v:2}, {l:'Hak 3', v:2}], desc: 'Temel çocuk haklarını sıralar.' },
-                { id: 's12', title: '12. Yaşa Uygun Sorumluluklar', max: 10, type: 'multi', parts: [{l:'Yem Verme', v:2}, {l:'Sepete Atma', v:2}, {l:'Yardım Etme', v:2}, {l:'Çanta', v:2}, {l:'Çöp', v:2}], desc: 'Sorumlulukları sınıflandırır.' }
+                { id: 's1', title: 'Sosyal Bilgiler 1.Soru', max: 8, type: 'score', step: 1, desc: 'Sosyal Bilgiler 1. soru puanı.' },
+                { id: 's2', title: 'Sosyal Bilgiler 2.Soru', max: 8, type: 'score', step: 1, desc: 'Sosyal Bilgiler 2. soru puanı.' },
+                { id: 's3', title: 'Sosyal Bilgiler 3.Soru', max: 4, type: 'score', step: 1, desc: 'Sosyal Bilgiler 3. soru puanı.' },
+                { id: 's4', title: 'Sosyal Bilgiler 4.Soru', max: 10, type: 'score', step: 1, desc: 'Sosyal Bilgiler 4. soru puanı.' },
+                { id: 's5', title: 'Sosyal Bilgiler 5.Soru', max: 18, type: 'score', step: 1, desc: 'Sosyal Bilgiler 5. soru puanı.' },
+                { id: 's6', title: 'Sosyal Bilgiler 6.Soru', max: 8, type: 'score', step: 1, desc: 'Sosyal Bilgiler 6. soru puanı.' },
+                { id: 's7', title: 'Sosyal Bilgiler 7.Soru', max: 12, type: 'score', step: 1, desc: 'Sosyal Bilgiler 7. soru puanı.' },
+                { id: 's8_9', title: 'Sosyal Bilgiler 8-9.Sorular', max: 10, type: 'score', step: 1, desc: 'Sosyal Bilgiler 8 ve 9. soruların toplam puanı.' },
+                { id: 's10', title: 'Sosyal Bilgiler 10.Soru', max: 6, type: 'score', step: 1, desc: 'Sosyal Bilgiler 10. soru puanı.' },
+                { id: 's11', title: 'Sosyal Bilgiler 11.Soru', max: 6, type: 'score', step: 1, desc: 'Sosyal Bilgiler 11. soru puanı.' },
+                { id: 's12', title: 'Sosyal Bilgiler 12.Soru', max: 10, type: 'score', step: 1, desc: 'Sosyal Bilgiler 12. soru puanı.' }
             ]
         };
 
@@ -281,6 +436,77 @@
         function triggerAutoSync() {
             if (autoSyncTimer) clearTimeout(autoSyncTimer);
             autoSyncTimer = setTimeout(() => { syncToCloud(); }, 1500); 
+        }
+
+        function sumOldScores(data, oldIds) {
+            let sum = 0;
+            oldIds.forEach(id => {
+                const rawVal = data[id];
+                if (rawVal !== undefined) {
+                    if (typeof rawVal === 'object' && rawVal !== null) {
+                        Object.values(rawVal).forEach(v => sum += v);
+                    } else if (typeof rawVal === 'number') {
+                        sum += rawVal;
+                    }
+                }
+            });
+            return sum;
+        }
+
+        function migrateData() {
+            let migrated = false;
+            if(!classMasterData.scores) return;
+
+            Object.keys(classMasterData.scores).forEach(st => {
+                ['TR', 'MAT', 'FEN', 'SOS'].forEach(subj => {
+                    let sData = classMasterData.scores[st][subj];
+                    if (!sData) return;
+                    let needsMigration = false;
+
+                    if (subj === 'TR' && sData.t1 !== undefined) {
+                        sData.t1_3 = sumOldScores(sData, ['t1', 't2', 't3']);
+                        sData.t4_5 = sumOldScores(sData, ['t4', 't5']);
+                        sData.t6 = sumOldScores(sData, ['t6']);
+                        sData.t7 = sumOldScores(sData, ['t7']);
+                        sData.t8 = sumOldScores(sData, ['t8']);
+                        sData.t9 = sumOldScores(sData, ['t9']);
+                        sData.t10 = sumOldScores(sData, ['t10']);
+                        ['t1', 't2', 't3', 't4', 't5'].forEach(k => delete sData[k]);
+                        needsMigration = true;
+                    }
+
+                    if (subj === 'MAT' && (typeof sData.m1 === 'object' || typeof sData.m4 === 'object' || typeof sData.m12 === 'object')) {
+                        for(let i=1; i<=13; i++) {
+                            let k = 'm'+i;
+                            sData[k] = sumOldScores(sData, [k]);
+                        }
+                        needsMigration = true;
+                    }
+
+                    if (subj === 'FEN' && (typeof sData.f1 === 'object' || typeof sData.f6 === 'object')) {
+                        for(let i=1; i<=8; i++) {
+                            let k = 'f'+i;
+                            sData[k] = sumOldScores(sData, [k]);
+                        }
+                        needsMigration = true;
+                    }
+
+                    if (subj === 'SOS' && (typeof sData.s5 === 'object' || typeof sData.s12 === 'object')) {
+                        for(let i=1; i<=12; i++) {
+                            let k = 's'+i;
+                            sData[k] = sumOldScores(sData, [k]);
+                        }
+                        needsMigration = true;
+                    }
+
+                    if (needsMigration) migrated = true;
+                });
+            });
+
+            if (migrated) {
+                console.log("Eski rubrik verileri yeni formata dönüştürüldü.");
+                syncToCloud();
+            }
         }
 
         // ESKİ TİP SINIF YÜKLEME (TIKLANDIĞINDA YÜKLER)
@@ -297,6 +523,7 @@
                     classMasterData = docRef.data();
                     if(!classMasterData.students) classMasterData.students = [];
                     if(!classMasterData.scores) classMasterData.scores = {};
+                    migrateData();
                 } else {
                     classMasterData = { students: [], scores: {} };
                 }
@@ -608,6 +835,7 @@
                 card.innerHTML = inner; container.appendChild(card);
             });
             updateTabIndicators();
+            updateQuickReadPanel();
         }
 
         function setScore(id, val) { classMasterData.scores[currentStudent][activeSubject][id] = val; renderQuestions(); triggerAutoSync(); }
@@ -950,6 +1178,30 @@
             document.getElementById('editModal').classList.add('hidden');
             syncToCloud(); alert(`${activeClass} Şubesi ana listesi güncellendi.`);
         }
+
+
     </script>
+
+    <!-- Toast Bildirimi -->
+    <div id="toastNotification" class="fixed top-5 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white px-6 py-3 rounded-full shadow-2xl z-[1000] font-bold text-sm transition-all duration-300 opacity-0 pointer-events-none flex items-center gap-2">
+        <i class="fas fa-info-circle text-blue-400"></i> <span id="toastText"></span>
+    </div>
+
+    <!-- Hızlı Okuma Paneli (Yapıştırınca açılır) -->
+    <div id="quickReadPanel" class="fixed bottom-4 right-4 bg-white/95 backdrop-blur-md p-4 rounded-2xl shadow-2xl border border-blue-200 z-[90] hidden flex-col w-64 transition-all duration-300 transform scale-95 origin-bottom-right">
+        <div class="flex justify-between items-center border-b pb-2 mb-2 border-blue-100">
+            <h4 class="font-black text-blue-800 text-sm truncate" id="qrStudentName"></h4>
+            <button onclick="document.getElementById('quickReadPanel').classList.add('hidden')" class="text-slate-400 hover:text-red-500"><i class="fas fa-times"></i></button>
+        </div>
+        <p class="text-xs text-slate-500 font-bold mb-2 uppercase" id="qrSubjectName"></p>
+        <div id="qrScoresList" class="flex flex-col gap-1.5 max-h-64 overflow-y-auto hide-scrollbar">
+            <!-- Puanlar buraya -->
+        </div>
+        <div class="mt-3 pt-2 border-t border-blue-100 text-right">
+            <span class="text-xs font-bold text-slate-500">TOPLAM:</span>
+            <span class="text-lg font-black text-blue-600" id="qrTotalScore">0</span>
+        </div>
+    </div>
+
 </body>
 </html>
