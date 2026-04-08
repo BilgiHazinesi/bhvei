@@ -33,125 +33,6 @@
             }, 3000);
         }
 
-        // Global Paste Listener
-        document.addEventListener('paste', async (e) => {
-            // Eğer kullanıcı arama kutusuna (veya textarea'ya) bilerek yapıştırıyorsa engelleme
-            const activeTag = document.activeElement.tagName.toLowerCase();
-            if (activeTag === 'textarea' || (activeTag === 'input' && document.activeElement.id !== 'searchInput')) return;
-
-            e.preventDefault(); // Varsayılan yapıştırmayı durdur
-            let pastedText = (e.clipboardData || window.clipboardData).getData('text');
-            if(!pastedText) return;
-
-            pastedText = pastedText.trim();
-            // Kullanıcı metni şöyle kopyalamış olabilir:
-            // "AHMET CEVDET KORKMAZ
-            // 4-D"
-            // Metni satırlara böl
-            const lines = pastedText.split('\n').map(l => l.trim()).filter(l => l);
-            if(lines.length === 0) return;
-
-            let extractedName = "";
-            let targetClass = activeClass; // Varsayılan olarak mevcut sınıf
-            let classChanged = false;
-
-            // Satırlarda sınıfı bulmaya çalış (ör: 4-A, 4-B, vb.)
-            for(let line of lines) {
-                let classMatch = line.match(/\b[1-4]\s*[-/]?\s*([A-D])\b/i);
-                if(classMatch) {
-                    targetClass = classMatch[1].toUpperCase();
-                    // Sınıfı bulduğumuz satırı isim olarak değerlendirme
-                } else if(line.length > 3 && !extractedName) {
-                    // İlk mantıklı uzun satırı isim kabul et
-                    extractedName = line;
-                }
-            }
-
-            // Eğer isme ulaşamadıysak doğrudan tüm yapıştırılan metni isim kabul et
-            if(!extractedName) extractedName = pastedText.replace(/\b[1-4]\s*[-/]?\s*[A-D]\b/gi, '').trim();
-            
-            // İsmi temizle (başlıkları, vb.)
-            extractedName = extractedName.toLocaleUpperCase('tr').replace(/[^A-ZÇĞİÖŞÜ\s]/gi, '').trim();
-
-            if(!extractedName) {
-                showToast("Panodan geçerli bir isim bulunamadı.", 'error');
-                return;
-            }
-
-            // Sınıf değişikliği gerekiyor mu?
-            if(targetClass !== activeClass) {
-                showToast(targetClass + " şubesine geçiliyor...", 'info');
-                await bootClass(targetClass);
-                classChanged = true;
-            }
-
-            // Öğrenciyi mevcut listede ara
-            let studentsList = classMasterData.students;
-            
-            // Tam eşleşme ara
-            let foundStudent = studentsList.find(s => s.toLocaleUpperCase('tr') === extractedName);
-            
-            // Tam eşleşme yoksa kısmı eşleşme ara (ilk kelimeler)
-            if(!foundStudent) {
-                const words = extractedName.split(' ');
-                if(words.length >= 2) {
-                    foundStudent = studentsList.find(s => s.toLocaleUpperCase('tr').includes(words[0]) && s.toLocaleUpperCase('tr').includes(words[1]));
-                }
-            }
-            
-            if(foundStudent) {
-                selectStudent(foundStudent);
-                showToast("Bulundu: " + foundStudent, 'success');
-                // Hızlı okuma panelini aç
-                document.getElementById('quickReadPanel').classList.remove('hidden');
-                document.getElementById('quickReadPanel').classList.add('flex');
-                setTimeout(() => document.getElementById('quickReadPanel').classList.remove('scale-95'), 50);
-            } else {
-                showToast("Öğrenci (" + extractedName + ") bu şubede (" + targetClass + ") bulunamadı!", 'error');
-                if(!classChanged) {
-                    document.getElementById('searchInput').value = extractedName;
-                    filterStudents();
-                }
-            }
-        });
-
-        // Hızlı Okuma Panelini Güncelleyen Fonksiyon (renderQuestions içinde çağrılacak)
-        function updateQuickReadPanel() {
-            const panel = document.getElementById('quickReadPanel');
-            if(panel.classList.contains('hidden')) return;
-            
-            if(!currentStudent) return;
-            
-            document.getElementById('qrStudentName').innerText = currentStudent;
-            const subjectFullNames = { TR:'TÜRKÇE', MAT:'MATEMATİK', FEN:'FEN BİLİMLERİ', SOS:'SOSYAL BİLGİLER' };
-            document.getElementById('qrSubjectName').innerText = subjectFullNames[activeSubject];
-
-            const list = document.getElementById('qrScoresList');
-            list.innerHTML = "";
-            let total = 0;
-
-            const data = (classMasterData.scores[currentStudent] && classMasterData.scores[currentStudent][activeSubject]) ? classMasterData.scores[currentStudent][activeSubject] : {};
-            
-            questionsData[activeSubject].forEach((q, i) => {
-                const sc = calculateSafeScore(data, q);
-                total += sc;
-                
-                // Sade görünüm: Soru 1: 36
-                const qShortTitle = q.title.split(' ')[0] + " " + (i+1); // Sadece konu ve sıra no
-                
-                const item = document.createElement('div');
-                item.className = "flex justify-between items-center py-1 border-b border-dashed border-blue-100 last:border-0";
-                item.innerHTML = `
-                    <span class="text-xs text-slate-600 font-semibold truncate flex-1 pr-2" title="${q.title}">${q.title}</span>
-                    <span class="text-sm font-black ${sc === q.max ? 'text-emerald-500' : sc === 0 ? 'text-red-500' : 'text-orange-500'} bg-slate-50 px-2 py-0.5 rounded border border-slate-100 min-w-[30px] text-center">${sc}</span>
-                `;
-                list.appendChild(item);
-            });
-            
-            document.getElementById('qrTotalScore').innerText = total;
-        }
-
-
 </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
@@ -229,7 +110,7 @@
 
                     <div class="relative w-full md:max-w-md lg:max-w-lg">
                         <div class="relative h-10"> 
-                            <input type="text" id="searchInput" class="w-full h-full pl-9 pr-10 border-2 border-slate-300 rounded-lg bg-white focus:border-blue-600 focus:ring-0 font-bold text-sm outline-none shadow-sm transition" placeholder="Öğrenci Ara veya İsim Yapıştır (Ctrl+V)" oninput="filterStudents()" onfocus="filterStudents()" autocomplete="off">
+                            <input type="text" id="searchInput" class="w-full h-full pl-9 pr-10 border-2 border-slate-300 rounded-lg bg-white focus:border-blue-600 focus:ring-0 font-bold text-sm outline-none shadow-sm transition" placeholder="Öğrenci Ara..." oninput="filterStudents()" onfocus="filterStudents()" autocomplete="off">
                             <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 text-sm"></i>
                             <div class="clear-btn" onclick="clearSearch()"><i class="fas fa-times"></i></div>
                         </div>
@@ -245,6 +126,7 @@
 
                         
 
+                        <button onclick="generateConsoleScript()" class="bg-purple-600 text-white px-2.5 py-1.5 rounded-lg font-bold text-xs shadow-sm hover:bg-purple-700 flex items-center gap-1.5 transition active:scale-95" title="Okul Sitesi İçin Script Kopyala"><i class="fas fa-code"></i> <span class="hidden sm:inline">Script</span></button>
                         <button onclick="openClassReport()" class="bg-teal-600 text-white px-2.5 py-1.5 rounded-lg font-bold text-xs shadow-sm hover:bg-teal-700 flex items-center gap-1.5 transition active:scale-95"><i class="fas fa-chart-bar"></i> <span class="hidden sm:inline">Özet</span></button>
                         <button onclick="openEditModal()" class="bg-slate-600 text-white px-2.5 py-1.5 rounded-lg font-bold text-xs shadow-sm hover:bg-slate-700 flex items-center gap-1.5 transition active:scale-95"><i class="fas fa-list"></i> <span class="hidden sm:inline">Liste</span></button>
 
@@ -475,27 +357,52 @@
                         needsMigration = true;
                     }
                     
-                    if (subj === 'MAT' && (typeof sData.m1 === 'object' || typeof sData.m4 === 'object' || typeof sData.m12 === 'object')) {
-                        for(let i=1; i<=13; i++) {
+                    if (subj === 'MAT' && (typeof sData.m1 === 'object' || typeof sData.m4 === 'object' || typeof sData.m12 === 'object' || sData.m12 !== undefined)) {
+                        for(let i=1; i<=11; i++) {
                             let k = 'm'+i;
                             sData[k] = sumOldScores(sData, [k]);
                         }
+                        sData.m12_13 = sumOldScores(sData, ['m12', 'm13']);
+                        ['m12', 'm13'].forEach(k => delete sData[k]);
                         needsMigration = true;
                     }
 
-                    if (subj === 'FEN' && (typeof sData.f1 === 'object' || typeof sData.f6 === 'object')) {
-                        for(let i=1; i<=8; i++) {
-                            let k = 'f'+i;
-                            sData[k] = sumOldScores(sData, [k]);
+                    if (subj === 'FEN' && (typeof sData.f1 === 'object' || typeof sData.f6 === 'object' || typeof sData.f3 === 'object' || typeof sData.f4 === 'object')) {
+                        sData.f1 = sumOldScores(sData, ['f1']);
+                        sData.f2 = sumOldScores(sData, ['f2']);
+                        
+                        // FEN f3 used to be multi-part.
+                        let oldF3 = sData.f3 || {};
+                        for(let i=0; i<=4; i++) {
+                            sData['f3_'+(i+1)] = oldF3[i] !== undefined ? oldF3[i] : 0;
                         }
+
+                        // FEN f4 used to be multi-part.
+                        let oldF4 = sData.f4 || {};
+                        for(let i=0; i<=4; i++) {
+                            sData['f4_'+(i+1)] = oldF4[i] !== undefined ? oldF4[i] : 0;
+                        }
+
+                        sData.f5 = sumOldScores(sData, ['f5']);
+                        sData.f6 = sumOldScores(sData, ['f6']);
+                        sData.f7 = sumOldScores(sData, ['f7']);
+                        sData.f8 = sumOldScores(sData, ['f8']);
+
+                        ['f3', 'f4'].forEach(k => delete sData[k]);
                         needsMigration = true;
                     }
 
-                    if (subj === 'SOS' && (typeof sData.s5 === 'object' || typeof sData.s12 === 'object')) {
-                        for(let i=1; i<=12; i++) {
+                    if (subj === 'SOS' && (typeof sData.s5 === 'object' || typeof sData.s12 === 'object' || sData.s8 !== undefined)) {
+                        for(let i=1; i<=7; i++) {
                             let k = 's'+i;
                             sData[k] = sumOldScores(sData, [k]);
                         }
+                        sData.s8_9 = sumOldScores(sData, ['s8', 's9']);
+                        sData.s10 = sumOldScores(sData, ['s10']);
+                        sData.s11 = sumOldScores(sData, ['s11']);
+                        sData.s12 = sumOldScores(sData, ['s12']);
+                        
+                        ['s8', 's9'].forEach(k => delete sData[k]);
                         needsMigration = true;
                     }
 
@@ -835,7 +742,6 @@
                 card.innerHTML = inner; container.appendChild(card);
             });
             updateTabIndicators();
-            updateQuickReadPanel();
         }
 
         function setScore(id, val) { classMasterData.scores[currentStudent][activeSubject][id] = val; renderQuestions(); triggerAutoSync(); }
@@ -1179,28 +1085,193 @@
             syncToCloud(); alert(`${activeClass} Şubesi ana listesi güncellendi.`);
         }
 
+        function generateConsoleScript() {
+            if(!classMasterData || !classMasterData.scores) {
+                showToast("Aktarılacak veri bulunamadı!", "error");
+                return;
+            }
+
+            const subjectFullNames = { TR:'TÜRKÇE', MAT:'MATEMATİK', FEN:'FEN BİLİMLERİ', SOS:'SOSYAL BİLGİLER' };
+
+            // Extract the simple list of questions for the active subject
+            const qList = questionsData[activeSubject].map(q => ({
+                id: q.id,
+                title: q.title,
+                max: q.max
+            }));
+
+            // We only need the scores for the current class & active subject
+            const simpleScores = {};
+            classMasterData.students.forEach(st => {
+                if (classMasterData.scores[st] && classMasterData.scores[st][activeSubject]) {
+                    simpleScores[st] = classMasterData.scores[st][activeSubject];
+                }
+            });
+
+            // The code that will be executed in the school site's console
+            const scriptContent = `
+(function() {
+    // 1. Data Injection
+    const className = "${activeClass}";
+    const subjectCode = "${activeSubject}";
+    const subjectName = "${subjectFullNames[activeSubject]}";
+    const questions = ${JSON.stringify(qList)};
+    const studentScores = ${JSON.stringify(simpleScores)};
+    const studentsList = ${JSON.stringify(classMasterData.students)};
+
+    // 2. Helper to safely calculate score 
+    function calculateSafeScore(data, q) {
+        let s = 0; let rawVal = data[q.id];
+        if (q.type === 'multi') {
+            if(typeof rawVal === 'object' && rawVal !== null) Object.values(rawVal).forEach(v => s += v);
+            else if(typeof rawVal === 'number') s = rawVal;
+        } else { s = (typeof rawVal === 'number' ? rawVal : 0); }
+        return s;
+    }
+
+    // 3. Remove existing panel if any
+    const existing = document.getElementById('hdp-assistant-panel');
+    if (existing) existing.remove();
+
+    // 4. Create UI
+    const panel = document.createElement('div');
+    panel.id = 'hdp-assistant-panel';
+    panel.style.cssText = "position:fixed; top:20px; right:20px; width:340px; background:#fff; border:2px solid #2563eb; border-radius:12px; box-shadow:0 10px 25px rgba(0,0,0,0.2); z-index:999999; font-family:sans-serif; overflow:hidden;";
+    
+    // Header
+    const header = document.createElement('div');
+    header.style.cssText = "background:#2563eb; color:#fff; padding:12px 16px; display:flex; justify-content:space-between; align-items:center; cursor:move;";
+    header.innerHTML = '<div style="font-weight:bold; font-size:14px;">HDP Asistanı - ' + className + ' Şubesi (' + subjectName + ')</div><button id="hdp-close" style="background:none; border:none; color:white; font-size:18px; cursor:pointer; padding:0;">×</button>';
+    panel.appendChild(header);
+
+    // Body
+    const body = document.createElement('div');
+    body.style.cssText = "padding:16px; background:#f8fafc;";
+    
+    // Search Box
+    const searchInput = document.createElement('input');
+    searchInput.type = "text";
+    searchInput.placeholder = "Öğrenci arayın...";
+    searchInput.style.cssText = "width:100%; box-sizing:border-box; padding:10px; border:2px solid #cbd5e1; border-radius:8px; font-size:16px; outline:none; margin-bottom:12px;";
+    
+    searchInput.addEventListener('focus', function() {
+        this.style.borderColor = '#2563eb';
+    });
+    searchInput.addEventListener('blur', function() {
+        this.style.borderColor = '#cbd5e1';
+    });
+
+    // Content Area for Scores
+    const contentArea = document.createElement('div');
+    contentArea.style.cssText = "max-height: 400px; overflow-y:auto; border:1px solid #e2e8f0; border-radius:8px; background:white; padding:8px;";
+    contentArea.innerHTML = '<div style="text-align:center; color:#64748b; padding:20px; font-size:13px;">Başlamak için öğrenci ismi yazın veya yapıştırın.</div>';
+
+    body.appendChild(searchInput);
+    body.appendChild(contentArea);
+    panel.appendChild(body);
+    document.body.appendChild(panel);
+
+    // 5. Interaction Logic
+    document.getElementById('hdp-close').addEventListener('click', () => panel.remove());
+
+    searchInput.addEventListener('input', (e) => {
+        const val = e.target.value.toLocaleUpperCase('tr').trim();
+        if (!val) {
+            contentArea.innerHTML = '<div style="text-align:center; color:#64748b; padding:20px; font-size:13px;">Başlamak için öğrenci ismi yazın veya yapıştırın.</div>';
+            return;
+        }
+
+        // Parse paste if it has multiple lines (e.g. from table)
+        let searchName = val;
+        const lines = val.split('\\n');
+        if (lines.length > 1) {
+            searchName = lines[0].trim();
+        }
+
+        const match = studentsList.find(s => s.toLocaleUpperCase('tr') === searchName) || 
+                      studentsList.find(s => s.toLocaleUpperCase('tr').includes(searchName));
+
+        if (!match) {
+            contentArea.innerHTML = '<div style="text-align:center; color:#ef4444; padding:20px; font-weight:bold;">Bulunamadı!</div>';
+            return;
+        }
+
+        // Render Scores
+        const data = studentScores[match] || {};
+        let total = 0;
+        let html = '<div style="font-weight:bold; color:#1e293b; padding-bottom:8px; margin-bottom:8px; border-bottom:2px solid #e2e8f0; font-size:15px;">' + match + '</div>';
         
+        html += '<div style="display:flex; flex-direction:column; gap:6px;">';
+        questions.forEach((q, i) => {
+            const sc = calculateSafeScore(data, q);
+            total += sc;
+            let color = sc === q.max ? '#10b981' : (sc === 0 ? '#ef4444' : '#f59e0b');
+            
+            html += '<div style="display:flex; justify-content:space-between; align-items:center; padding:4px 8px; border-radius:4px; background:#f1f5f9;">';
+            html += '<span style="font-size:12px; color:#475569; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; padding-right:8px;" title="'+q.title+'">' + q.title + '</span>';
+            html += '<span style="font-weight:900; font-size:14px; color:'+color+';">' + sc + '</span>';
+            html += '</div>';
+        });
+        html += '</div>';
+
+        html += '<div style="margin-top:12px; padding-top:8px; border-top:2px solid #e2e8f0; text-align:right; font-size:13px; color:#64748b;">TOPLAM: <span style="font-size:18px; font-weight:900; color:#2563eb;">' + total + '</span></div>';
+
+        contentArea.innerHTML = html;
+    });
+
+    // Make panel draggable
+    let isDragging = false;
+    let currentX;
+    let currentY;
+    let initialX;
+    let initialY;
+    let xOffset = 0;
+    let yOffset = 0;
+
+    header.addEventListener('mousedown', dragStart);
+    document.addEventListener('mouseup', dragEnd);
+    document.addEventListener('mousemove', drag);
+
+    function dragStart(e) {
+        initialX = e.clientX - xOffset;
+        initialY = e.clientY - yOffset;
+        if (e.target === header || header.contains(e.target)) {
+            isDragging = true;
+        }
+    }
+    function dragEnd(e) {
+        initialX = currentX;
+        initialY = currentY;
+        isDragging = false;
+    }
+    function drag(e) {
+        if (isDragging) {
+            e.preventDefault();
+            currentX = e.clientX - initialX;
+            currentY = e.clientY - initialY;
+            xOffset = currentX;
+            yOffset = currentY;
+            panel.style.transform = "translate3d(" + currentX + "px, " + currentY + "px, 0)";
+        }
+    }
+
+    console.log("HDP Asistanı başarıyla yüklendi.");
+})();
+            `;
+
+            // Copy to clipboard
+            navigator.clipboard.writeText(scriptContent).then(() => {
+                showToast("Script Kopyalandı! Okul sitesinde Console'a yapıştırın.", "success", 4000);
+            }).catch(err => {
+                console.error("Kopyalama başarısız:", err);
+                showToast("Kopyalama başarısız oldu. Tarayıcı izinlerini kontrol edin.", "error");
+            });
+        }
     </script>
 
     <!-- Toast Bildirimi -->
     <div id="toastNotification" class="fixed top-5 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white px-6 py-3 rounded-full shadow-2xl z-[1000] font-bold text-sm transition-all duration-300 opacity-0 pointer-events-none flex items-center gap-2">
         <i class="fas fa-info-circle text-blue-400"></i> <span id="toastText"></span>
-    </div>
-
-    <!-- Hızlı Okuma Paneli (Yapıştırınca açılır) -->
-    <div id="quickReadPanel" class="fixed bottom-4 right-4 bg-white/95 backdrop-blur-md p-4 rounded-2xl shadow-2xl border border-blue-200 z-[90] hidden flex-col w-64 transition-all duration-300 transform scale-95 origin-bottom-right">
-        <div class="flex justify-between items-center border-b pb-2 mb-2 border-blue-100">
-            <h4 class="font-black text-blue-800 text-sm truncate" id="qrStudentName"></h4>
-            <button onclick="document.getElementById('quickReadPanel').classList.add('hidden')" class="text-slate-400 hover:text-red-500"><i class="fas fa-times"></i></button>
-        </div>
-        <p class="text-xs text-slate-500 font-bold mb-2 uppercase" id="qrSubjectName"></p>
-        <div id="qrScoresList" class="flex flex-col gap-1.5 max-h-64 overflow-y-auto hide-scrollbar">
-            <!-- Puanlar buraya -->
-        </div>
-        <div class="mt-3 pt-2 border-t border-blue-100 text-right">
-            <span class="text-xs font-bold text-slate-500">TOPLAM:</span>
-            <span class="text-lg font-black text-blue-600" id="qrTotalScore">0</span>
-        </div>
     </div>
 
 </body>
