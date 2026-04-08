@@ -1216,7 +1216,68 @@
 
         html += '<div style="margin-top:12px; padding-top:8px; border-top:2px solid #e2e8f0; text-align:right; font-size:13px; color:#64748b;">TOPLAM: <span style="font-size:18px; font-weight:900; color:#2563eb;">' + total + '</span></div>';
 
+        // Ekleme: Sisteme Aktar Butonu
+        html += '<button id="inject-btn" style="width:100%; margin-top:12px; padding:10px; background:#2563eb; color:white; border:none; border-radius:6px; font-weight:bold; cursor:pointer; font-size:14px; transition:0.2s;">Sisteme Aktar 🚀</button>';
+
         contentArea.innerHTML = html;
+
+        // Ekleme: Sisteme Aktar Fonksiyonu
+        document.getElementById('inject-btn').addEventListener('click', function() {
+            const btn = this;
+            btn.innerHTML = "İŞLENİYOR...";
+            btn.style.background = "#f59e0b";
+
+            // 1. Üst sekmelerden öğrenciyi bul ve tıkla (.nav-tabs içindeki a, li veya span)
+            const tabs = Array.from(document.querySelectorAll('.nav-tabs a, .nav-tabs li, .nav-tabs span'));
+            const targetTab = tabs.find(el => el.textContent && el.textContent.trim().toUpperCase().includes(match.toUpperCase()));
+
+            if (targetTab) {
+                targetTab.click();
+            } else {
+                console.warn("Öğrenci sekmesi tıklanmak için bulunamadı, mevcut ekrana yazmayı deneyecek.");
+            }
+
+            // 2. Sekmenin açılması için kısa bir süre bekle ve aktif sekmedeki inputları doldur
+            setTimeout(() => {
+                // YALNIZCA ekranda aktif olarak görünen tab-pane içindeki number inputları seç (Ekran görüntüsündeki yapı)
+                const inputs = Array.from(document.querySelectorAll('.tab-pane.active.show input[type="number"]'));
+
+                if (inputs.length === 0) {
+                    btn.innerHTML = "KUTUCUK BULUNAMADI ✖";
+                    btn.style.background = "#ef4444";
+                    return;
+                }
+
+                // Sorular sırasıyla DOM'daki inputlara aktarılıyor
+                let filled = 0;
+                questions.forEach((q, index) => {
+                    if (inputs[index]) {
+                        const val = calculateSafeScore(data, q);
+
+                        const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
+                        if (nativeInputValueSetter) {
+                            nativeInputValueSetter.call(inputs[index], val);
+                        } else {
+                            inputs[index].value = val;
+                        }
+
+                        inputs[index].dispatchEvent(new Event('input', { bubbles: true }));
+                        inputs[index].dispatchEvent(new Event('change', { bubbles: true }));
+                        inputs[index].dispatchEvent(new Event('blur', { bubbles: true }));
+                        filled++;
+                    }
+                });
+
+                btn.innerHTML = filled + " NOT AKTARILDI ✓";
+                btn.style.background = "#10b981";
+
+                setTimeout(() => {
+                    btn.innerHTML = "Sisteme Aktar 🚀";
+                    btn.style.background = "#2563eb";
+                }, 2000);
+
+            }, 800); // Sistem yavaşsa bu bekleme süresini artırabilirsiniz
+        });
     });
 
     // Make panel draggable
