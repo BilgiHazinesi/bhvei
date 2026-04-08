@@ -284,10 +284,18 @@
             FEN: [
                 { id: 'f1', title: 'Fen Bilimleri 1.Soru', max: 10, type: 'score', step: 1, desc: 'Fen Bilimleri 1. soru puanı.' },
                 { id: 'f2', title: 'Fen Bilimleri 2.Soru', max: 8, type: 'score', step: 1, desc: 'Fen Bilimleri 2. soru puanı.' },
-                { id: 'f3', title: 'Fen Bilimleri 3.Soru', max: 15, type: 'score', step: 1, desc: 'Fen Bilimleri 3. soru puanı.' },
-                { id: 'f4', title: 'Fen Bilimleri 4.Soru', max: 15, type: 'score', step: 1, desc: 'Fen Bilimleri 4. soru puanı.' },
-                { id: 'f5', title: 'Fen Bilimleri 5.Soru', max: 10, type: 'score', step: 1, desc: 'Fen Bilimleri 5. soru puanı.' },
-                { id: 'f6', title: 'Fen Bilimleri 6.Soru', max: 20, type: 'score', step: 1, desc: 'Fen Bilimleri 6. soru puanı.' },
+                { id: 'f3_1', title: 'Fen Bilimleri 3.Soru_1', max: 3, type: 'score', step: 1, desc: 'Fen Bilimleri 3. soru 1. bölüm puanı.' },
+                { id: 'f3_2', title: 'Fen Bilimleri 3.Soru_2', max: 3, type: 'score', step: 1, desc: 'Fen Bilimleri 3. soru 2. bölüm puanı.' },
+                { id: 'f3_3', title: 'Fen Bilimleri 3.Soru_3', max: 3, type: 'score', step: 1, desc: 'Fen Bilimleri 3. soru 3. bölüm puanı.' },
+                { id: 'f3_4', title: 'Fen Bilimleri 3.Soru_4', max: 3, type: 'score', step: 1, desc: 'Fen Bilimleri 3. soru 4. bölüm puanı.' },
+                { id: 'f3_5', title: 'Fen Bilimleri 3.Soru_5', max: 3, type: 'score', step: 1, desc: 'Fen Bilimleri 3. soru 5. bölüm puanı.' },
+                { id: 'f4_1', title: 'Fen Bilimleri 4.Soru_1', max: 3, type: 'score', step: 1, desc: 'Fen Bilimleri 4. soru 1. bölüm puanı.' },
+                { id: 'f4_2', title: 'Fen Bilimleri 4.Soru_2', max: 3, type: 'score', step: 1, desc: 'Fen Bilimleri 4. soru 2. bölüm puanı.' },
+                { id: 'f4_3', title: 'Fen Bilimleri 4.Soru_3', max: 3, type: 'score', step: 1, desc: 'Fen Bilimleri 4. soru 3. bölüm puanı.' },
+                { id: 'f4_4', title: 'Fen Bilimleri 4.Soru_4', max: 3, type: 'score', step: 1, desc: 'Fen Bilimleri 4. soru 4. bölüm puanı.' },
+                { id: 'f4_5', title: 'Fen Bilimleri 4.Soru_5', max: 3, type: 'score', step: 1, desc: 'Fen Bilimleri 4. soru 5. bölüm puanı.' },
+                { id: 'f5', title: 'Fen Bilimleri 5.Soru', max: 15, type: 'score', step: 1, desc: 'Fen Bilimleri 5. soru puanı.' },
+                { id: 'f6', title: 'Fen Bilimleri 6.Soru', max: 15, type: 'score', step: 1, desc: 'Fen Bilimleri 6. soru puanı.' },
                 { id: 'f7', title: 'Fen Bilimleri 7.Soru', max: 12, type: 'score', step: 1, desc: 'Fen Bilimleri 7. soru puanı.' },
                 { id: 'f8', title: 'Fen Bilimleri 8.Soru', max: 10, type: 'score', step: 1, desc: 'Fen Bilimleri 8. soru puanı.' }
             ],
@@ -360,28 +368,69 @@
                     }
 
                     // FEN migration
-                    // Check if it's the original object-based rubric OR if it's the broken migration from earlier (with f3_1...f4_5)
+                    // Check if it's the original object-based rubric OR if it's the temporary 8-question migration (where f3, f4, f5, f6 are numbers)
                     let isOriginalFen = typeof sData.f1 === 'object' || typeof sData.f6 === 'object' || typeof sData.f3 === 'object' || typeof sData.f4 === 'object';
-                    let isBrokenFen = sData.f3_1 !== undefined || sData.f4_1 !== undefined;
+                    let is8QuestionFen = typeof sData.f3 === 'number' && sData.f3_1 === undefined;
 
-                    if (subj === 'FEN' && (isOriginalFen || isBrokenFen)) {
+                    if (subj === 'FEN' && (isOriginalFen || is8QuestionFen)) {
 
                         if (isOriginalFen) {
                             sData.f1 = sumOldScores(sData, ['f1']);
                             sData.f2 = sumOldScores(sData, ['f2']);
-                            sData.f3 = sumOldScores(sData, ['f3']);
-                            sData.f4 = sumOldScores(sData, ['f4']);
+
+                            // Original f3 was a multi-part object
+                            let oldF3 = sData.f3 || {};
+                            for(let i=0; i<=4; i++) {
+                                sData['f3_'+(i+1)] = oldF3[i] !== undefined ? oldF3[i] : 0;
+                            }
+
+                            // Original f4 was a multi-part object
+                            let oldF4 = sData.f4 || {};
+                            for(let i=0; i<=4; i++) {
+                                sData['f4_'+(i+1)] = oldF4[i] !== undefined ? oldF4[i] : 0;
+                            }
+
                             sData.f5 = sumOldScores(sData, ['f5']);
-                            sData.f6 = sumOldScores(sData, ['f6']);
+                            let oldF6 = sumOldScores(sData, ['f6']);
+
+                            // Adjust f5 and f6 balances. If oldF6 was up to 20, but now max is 15.
+                            // If f6 > 15, carry over up to 5 points to f5.
+                            if (oldF6 > 15) {
+                                let overflow = oldF6 - 15;
+                                sData.f6 = 15;
+                                sData.f5 = Math.min(15, sData.f5 + overflow);
+                            } else {
+                                sData.f6 = oldF6;
+                            }
+
                             sData.f7 = sumOldScores(sData, ['f7']);
                             sData.f8 = sumOldScores(sData, ['f8']);
-                        } else if (isBrokenFen) {
-                            // Recover from the broken migration
-                            sData.f3 = sumOldScores(sData, ['f3_1', 'f3_2', 'f3_3', 'f3_4', 'f3_5']);
-                            sData.f4 = sumOldScores(sData, ['f4_1', 'f4_2', 'f4_3', 'f4_4', 'f4_5']);
 
-                            // Delete the broken keys
-                            ['f3_1', 'f3_2', 'f3_3', 'f3_4', 'f3_5', 'f4_1', 'f4_2', 'f4_3', 'f4_4', 'f4_5'].forEach(k => delete sData[k]);
+                            ['f3', 'f4'].forEach(k => delete sData[k]);
+                        } else if (is8QuestionFen) {
+                            // Recover from the 8-question format back to the 16-input format
+                            let totalF3 = sData.f3 || 0;
+                            let totalF4 = sData.f4 || 0;
+
+                            // Distribute points into buckets of 3
+                            for (let i = 1; i <= 5; i++) {
+                                let pointsToGive = Math.min(3, totalF3);
+                                sData['f3_'+i] = pointsToGive;
+                                totalF3 -= pointsToGive;
+
+                                let pointsToGiveF4 = Math.min(3, totalF4);
+                                sData['f4_'+i] = pointsToGiveF4;
+                                totalF4 -= pointsToGiveF4;
+                            }
+
+                            let oldF6 = sData.f6 || 0;
+                            if (oldF6 > 15) {
+                                let overflow = oldF6 - 15;
+                                sData.f6 = 15;
+                                sData.f5 = Math.min(15, (sData.f5 || 0) + overflow);
+                            }
+
+                            ['f3', 'f4'].forEach(k => delete sData[k]);
                         }
 
                         needsMigration = true;
