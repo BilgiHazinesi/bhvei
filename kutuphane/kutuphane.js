@@ -569,8 +569,11 @@ function renderHistory() {
             }
 
         } else { 
-            if(sVal) actionBtn = `<button class="btn-comment" onclick="returnBook('${r.id}')"><i class="fas fa-edit"></i> Yorumla</button>`; 
-            else actionBtn = `<span style="font-size:0.8rem;"><i class="far fa-calendar-check" style="opacity:0.7; margin-right:4px;"></i>${r.returnDate}</span>`; 
+            let mainAction = sVal
+                ? `<button class="btn-comment" onclick="returnBook('${r.id}')"><i class="fas fa-edit"></i> Yorumla</button>`
+                : `<span style="font-size:0.8rem;"><i class="far fa-calendar-check" style="opacity:0.7; margin-right:4px;"></i>${r.returnDate}</span>`;
+
+            actionBtn = `<div style="display:flex; gap:5px; align-items:center;">${mainAction}<button class="btn-delete" style="width:36px; height:36px; padding:0; display:flex; align-items:center; justify-content:center;" onclick="deleteRecord('${r.id}')" title="Hatalı kaydı sil"><i class="fas fa-trash"></i></button></div>`;
         } 
         
         div.innerHTML += `<div class="list-item"><div class="item-content"><h4>${r.book}</h4><div style="margin-top:5px; font-size:0.85rem; color:var(--text-sub); display:flex; flex-direction:column; gap:4px;"><span><i class="far fa-user" style="opacity:0.7; margin-right:4px;"></i>${r.student}</span><span>${dateDisplay}</span></div></div>${actionBtn}</div>`; 
