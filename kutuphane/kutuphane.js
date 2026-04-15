@@ -727,6 +727,49 @@ function populateDatalists() {
 function resetAllData() { let p = prompt("TÜM VERİLERİ SİLMEK İÇİN BÜYÜK HARFLERLE 'SİL' YAZIN:"); if(p === "SİL") { if(confirm("Emin misiniz? Bu sınıfın tüm öğrencileri, kitapları ve kayıtları silinecek!")) { students = []; books = []; records = []; bookPages = {}; studentPassObj={}; settings = { classTarget: 500, silverLimit: 3, goldLimit: 5 }; updateUI(); syncData(); alert("Sıfırlandı."); } } else { alert("Hatalı giriş, işlem iptal edildi."); } }
 function getMedals(count) { let goldCount = Math.floor(count / settings.goldLimit); let silverCount = Math.floor(count / settings.silverLimit); let medals = ""; for(let i=0; i<goldCount; i++) medals += "🥇"; for(let i=0; i<silverCount; i++) medals += "🥈"; return medals; }
 function getRank(count) { if(count >= 40) return "💎 EFSANE"; if(count >= 35) return "🌍 Bilge Okur"; if(count >= 30) return "🎩 Edebiyat Ustası"; if(count >= 25) return "👑 Kütüphane Muhafızı"; if(count >= 20) return "🏹 Kelime Avcısı"; if(count >= 15) return "🚀 Bilgi Kaşifi"; if(count >= 10) return "📖 Kitap Kurdu"; if(count >= 5)  return "🥉 Okuma Çırağı"; return "🌱 Başlangıç"; }
+function migrateOldData() {
+    if(!confirm("Eski sistemdeki kök dizin verilerini bu sınıfa aktarmak istediğinizden emin misiniz? (Önceden sınıfa eklenmiş veriler üzerine yazılabilir)")) return;
+
+    document.getElementById('loader').style.display = 'block';
+    document.getElementById('loader').innerText = "Eski Veriler Aranıyor...";
+
+    // Eski veriler kök dizindeydi (/)
+    db.ref('/').once('value').then((snapshot) => {
+        let rootData = snapshot.val();
+        if(!rootData || (!rootData.students && !rootData.records)) {
+            document.getElementById('loader').style.display = 'none';
+            alert("Kök dizinde taşınacak eski veri bulunamadı.");
+            return;
+        }
+
+        // Sadece eski veri alanlarını al (auth ve çoklu sınıf düğümlerini alma)
+        let legacyData = {
+            students: rootData.students || [],
+            studentPass: rootData.studentPass || {},
+            books: rootData.books || [],
+            bookPages: rootData.bookPages || {},
+            records: rootData.records || [],
+            settings: rootData.settings || settings
+        };
+
+        // Şu anki sınıfa (DB_REF) yaz
+        db.ref(DB_REF).set(legacyData).then(() => {
+            document.getElementById('loader').style.display = 'none';
+            alert("✅ Eski veriler başarıyla bu sınıfa aktarıldı!");
+            fetchData(false); // Sayfayı yeni verilerle güncelle
+        }).catch(err => {
+            document.getElementById('loader').style.display = 'none';
+            alert("Hata: Veriler aktarılamadı.");
+            console.error(err);
+        });
+
+    }).catch(err => {
+        document.getElementById('loader').style.display = 'none';
+        alert("Yetki Hatası: Eski verilere erişilemiyor. Lütfen Firebase Rules'u geçici olarak root erişimine açın.");
+        console.error(err);
+    });
+}
+
 function toggleStatsSort() { if(statsSortMode === 'book_desc') { statsSortMode = 'book_asc'; document.getElementById('sortBtnIcon').innerText = "Sırala: Kitap ⬆"; } else if (statsSortMode === 'book_asc') { statsSortMode = 'page_desc'; document.getElementById('sortBtnIcon').innerText = "Sırala: Sayfa ⬇"; } else { statsSortMode = 'book_desc'; document.getElementById('sortBtnIcon').innerText = "Sırala: Kitap ⬇"; } renderRanking(); }
 function renderRanking() { let counts = {}; let pageCounts = {}; records.forEach(r => { if(r.status === "İade Etti") { counts[r.student] = (counts[r.student]||0)+1; let p = parseInt(bookPages[r.book]) || 0; pageCounts[r.student] = (pageCounts[r.student]||0) + p; } }); let sorted = Object.keys(counts).map(k => ({n:k, c:counts[k], p:pageCounts[k]})); if(sorted.length > 0) { let topReader = sorted.reduce((prev, current) => (prev.c > current.c) ? prev : current); document.getElementById('statTopReader').innerText = topReader.n; } else { document.getElementById('statTopReader').innerText = "-"; } if(statsSortMode === 'book_desc') sorted.sort((a,b) => b.c - a.c); else if(statsSortMode === 'book_asc') sorted.sort((a,b) => a.c - b.c); else if(statsSortMode === 'page_desc') sorted.sort((a,b) => b.p - a.p); let html = ""; sorted.forEach((s,i) => { let rank = getRank(s.c); let medals = getMedals(s.c); let highlight = (i === 0 && statsSortMode !== 'book_asc') ? "color:#f59e0b;" : "color:var(--text-sub);"; let rankNum = (i === sorted.length - 1 && sorted.length > 1) ? `<span style="color:#ef4444; font-size:0.7rem;">(Son)</span>` : `${i+1}.`; if (i === 0) rankNum = "👑"; html += `<div class="list-item"><div class="item-content"><span style="font-weight:bold; ${highlight} margin-right:10px; min-width:20px; display:inline-block;">${rankNum}</span><span style="font-weight:600;">${s.n}</span><div class="rank-info">${rank}</div><div class="medal-container">${medals}</div></div><div style="text-align:right;"><div style="font-weight:800; color:var(--primary); font-size:1.1rem;">${s.c} Kitap</div><div style="font-size:0.75rem; color:var(--text-sub); margin-top:2px;">${s.p.toLocaleString()} Sayfa</div></div></div>`; }); document.getElementById('rankingList').innerHTML = html; }
 

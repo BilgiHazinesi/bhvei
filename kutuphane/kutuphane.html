@@ -196,6 +196,11 @@
                     <div class="divider-text" style="color:#ef4444;">Silme İşlemleri</div>
                     <div style="display:flex; gap:5px;"><input type="text" list="studentList" id="single-student-del" placeholder="Silinecek Öğrenci..." style="flex:1;"><button class="btn btn-danger" style="width:auto; margin-bottom:0;" onclick="delSingleStudent()">Sil</button></div>
                 </div>
+                <div class="glass-panel" style="border: 1px solid rgba(16, 185, 129, 0.3);">
+                    <h3 style="margin:0 0 15px 0; color:#10b981;">📦 Veri Taşıma</h3>
+                    <p style="font-size:0.8rem; color:var(--text-sub); margin-bottom:10px;">Eski sistemdeki verilerinizi bu yeni sınıfa aktarmak için aşağıdaki butonu kullanın. Sadece bir kez yapmanız yeterlidir.</p>
+                    <button class="btn btn-primary" style="background-color:#10b981;" onclick="migrateOldData()">🔥 Eski Verileri Bu Sınıfa Aktar</button>
+                </div>
                 <div class="glass-panel" style="border: 1px solid rgba(220, 38, 38, 0.3);"><h3 style="margin:0 0 15px 0; color:#ef4444;">⚠️ Tehlikeli Bölge</h3><button class="btn btn-danger" onclick="resetAllData()">Tüm Verileri Sıfırla</button></div>
             </div>
         </div>
