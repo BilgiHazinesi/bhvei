@@ -343,12 +343,10 @@ function analyzeData() {
     if(document.getElementById('statTotalPages')) document.getElementById('statTotalPages').innerText = totalPagesRead.toLocaleString(); 
 }
 
-function stripRating(val) {
-    if(!val) return "";
-    let clean = val.trim();
-    if(clean.includes(" - ")) {
-        // Find the last occurrence of ' - ' and return what follows it, because the book name might have a dash
-        // Actually, we prepend things like "🔴 📗 ⭐ 4,5 - Kitap Adı", so we just need everything after the first " - "
+function stripRating(bookName) {
+    if(!bookName) return "";
+    let clean = bookName.trim();
+    if(clean.startsWith("⭐")) {
         let parts = clean.split(" - ");
         if(parts.length > 1) {
             return parts.slice(1).join(" - ").trim();
@@ -716,71 +714,15 @@ function populateDatalists() {
     let sl = document.getElementById('studentList'); sl.innerHTML = ''; 
     let sLogin = document.getElementById('studentListLogin'); if(sLogin) sLogin.innerHTML = ''; 
     students.sort().forEach(s => { sl.innerHTML += `<option value="${s}">`; if(sLogin) sLogin.innerHTML += `<option value="${s}">`; }); 
-    updateDynamicBookList();
-}
-
-function updateDynamicBookList() {
-    let bl = document.getElementById('bookList'); 
-    if(!bl) return;
-    bl.innerHTML = ''; 
-    
-    // Get currently typed student
-    let studentInput = document.getElementById('studentInput');
-    let sVal = studentInput ? studentInput.value.trim().toLocaleUpperCase('tr-TR') : "";
-    
-    // Determine which books the student has read or is reading
-    let studentBooksMap = {};
-    records.forEach(r => {
-        if(r.student === sVal) {
-            studentBooksMap[normalizeStr(r.book)] = true;
-        }
-    });
-
-    let bookInfoList = books.map(b => {
+    let bl = document.getElementById('bookList'); bl.innerHTML = ''; 
+    books.sort().forEach(b => { 
         let key = normalizeStr(b);
-        let isRead = studentBooksMap[key] ? true : false;
-        
-        // Rafta / Dışarıda
-        let isOut = activeBooksMap[key] && activeBooksMap[key].length > 0;
-        
         let stats = bookStatsMap[key];
         let rawAvg = (stats && stats.ratingCount > 0) ? (stats.totalRating / stats.ratingCount) : 0;
-        
-        return {
-            name: b,
-            isRead: isRead,
-            isOut: isOut,
-            rawAvg: rawAvg,
-            avgStr: formatRating(rawAvg)
-        };
-    });
-
-    // Sırlama Kriterleri:
-    // 1. Okunmamış olanlar (Kırmızı) ÖNCE
-    // 2. Kendi içinde Puana göre yüksekten düşüğe (desc)
-    // 3. Puanı aynıysa, Rafta olanlar (Yeşil kitap simgesi) ÖNCE
-    bookInfoList.sort((a, b) => {
-        if (a.isRead !== b.isRead) {
-            return a.isRead ? 1 : -1; // Unread (-1) comes before Read (1)
-        }
-        if (b.rawAvg !== a.rawAvg) {
-            return b.rawAvg - a.rawAvg;
-        }
-        if (a.isOut !== b.isOut) {
-            return a.isOut ? 1 : -1; // Shelf (-1) comes before Out (1)
-        }
-        return a.name.localeCompare(b.name, 'tr');
-    });
-
-    bookInfoList.forEach(item => {
-        let readIcon = item.isRead ? "🟢" : "🔴";
-        let statusIcon = item.isOut ? "🚫" : "📗";
-        let ratingStr = item.avgStr != 0 ? `⭐${item.avgStr}` : "⭐0";
-        
-        // Örn: "🔴 📗 ⭐4,5 - Küçük Prens"
-        let displayStr = `${readIcon} ${statusIcon} ${ratingStr} - ${item.name}`;
-        bl.innerHTML += `<option value="${displayStr}"></option>`;
-    });
+        let avgScore = formatRating(rawAvg);
+        let ratingStr = avgScore != 0 ? `⭐ ${avgScore} - ` : "";
+        bl.innerHTML += `<option value="${ratingStr}${b}"></option>`;
+    }); 
 }
 function resetAllData() { let p = prompt("TÜM VERİLERİ SİLMEK İÇİN BÜYÜK HARFLERLE 'SİL' YAZIN:"); if(p === "SİL") { if(confirm("Emin misiniz? Bu sınıfın tüm öğrencileri, kitapları ve kayıtları silinecek!")) { students = []; books = []; records = []; bookPages = {}; studentPassObj={}; settings = { classTarget: 500, silverLimit: 3, goldLimit: 5 }; updateUI(); syncData(); alert("Sıfırlandı."); } } else { alert("Hatalı giriş, işlem iptal edildi."); } }
 function getMedals(count) { let goldCount = Math.floor(count / settings.goldLimit); let silverCount = Math.floor(count / settings.silverLimit); let medals = ""; for(let i=0; i<goldCount; i++) medals += "🥇"; for(let i=0; i<silverCount; i++) medals += "🥈"; return medals; }
