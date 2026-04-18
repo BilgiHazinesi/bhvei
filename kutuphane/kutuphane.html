@@ -6,8 +6,7 @@
     <title>Kütüphane</title>
     <!-- Firebase App (the core Firebase SDK) is always required and must be listed first -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-
-    <!-- If you enabled Analytics in your project, add the Firebase SDK for Analytics -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -27,13 +26,19 @@
             </div>
             
             <div id="teacherLoginForm">
+                <div class="input-wrapper" style="margin-bottom: 10px;">
+                    <input type="email" id="teacherEmail" placeholder="E-Posta Adresi" style="text-align:center;">
+                </div>
                 <div class="input-wrapper">
-                    <input type="password" id="appPassword" placeholder="Öğretmen Şifresi" style="text-align:center; letter-spacing: 5px;">
+                    <input type="password" id="appPassword" placeholder="Şifre" style="text-align:center; letter-spacing: 5px;">
                 </div>
             </div>
 
             <div id="studentLoginForm" style="display:none;">
-                <p style="font-size:0.85rem; color:var(--text-sub); margin-bottom:10px;">Sadece şifreni gir ve başla!</p>
+                <p style="font-size:0.85rem; color:var(--text-sub); margin-bottom:10px;">Öğretmeninin verdiği Sınıf Kodunu ve Şifreni gir!</p>
+                <div class="input-wrapper" style="margin-bottom: 10px;">
+                    <input type="text" id="classCodeInput" placeholder="Sınıf Kodu (Örn: 123456)" style="text-align:center; letter-spacing: 2px;" autocomplete="off">
+                </div>
                 <div class="input-wrapper">
                     <input type="password" id="studentLoginPass" placeholder="Öğrenci Şifreniz" style="text-align:center; letter-spacing: 2px;">
                 </div>
@@ -105,8 +110,9 @@
         <div class="app-header">
             <div class="app-title" id="mainTitle">Zeynal Öğretmen</div>
             <div style="display: flex; gap: 8px; align-items: center;">
+                <div id="headerClassCode" style="font-size: 0.8rem; background: rgba(59, 130, 246, 0.1); color: var(--primary); padding: 4px 8px; border-radius: 8px; font-weight: bold; display: none;">Sınıf Kodu: ---</div>
                 <button class="theme-btn" onclick="toggleTheme()" id="themeIcon">🌙</button>
-                <button class="theme-btn" onclick="location.reload()" style="color: #ef4444;" title="Çıkış Yap"><i class="fas fa-sign-out-alt"></i></button>
+                <button class="theme-btn" onclick="logoutApp()" style="color: #ef4444;" title="Çıkış Yap"><i class="fas fa-sign-out-alt"></i></button>
             </div>
         </div>
         
@@ -189,6 +195,11 @@
                     
                     <div class="divider-text" style="color:#ef4444;">Silme İşlemleri</div>
                     <div style="display:flex; gap:5px;"><input type="text" list="studentList" id="single-student-del" placeholder="Silinecek Öğrenci..." style="flex:1;"><button class="btn btn-danger" style="width:auto; margin-bottom:0;" onclick="delSingleStudent()">Sil</button></div>
+                </div>
+                <div class="glass-panel" style="border: 1px solid rgba(16, 185, 129, 0.3);">
+                    <h3 style="margin:0 0 15px 0; color:#10b981;">📦 Veri Taşıma</h3>
+                    <p style="font-size:0.8rem; color:var(--text-sub); margin-bottom:10px;">Eski sistemdeki verilerinizi bu yeni sınıfa aktarmak için aşağıdaki butonu kullanın. Sadece bir kez yapmanız yeterlidir.</p>
+                    <button class="btn btn-primary" style="background-color:#10b981;" onclick="migrateOldData()">🔥 Eski Verileri Bu Sınıfa Aktar</button>
                 </div>
                 <div class="glass-panel" style="border: 1px solid rgba(220, 38, 38, 0.3);"><h3 style="margin:0 0 15px 0; color:#ef4444;">⚠️ Tehlikeli Bölge</h3><button class="btn btn-danger" onclick="resetAllData()">Tüm Verileri Sıfırla</button></div>
             </div>
