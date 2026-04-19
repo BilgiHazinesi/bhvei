@@ -125,6 +125,8 @@ function processData(data) {
         targetInput.value = settings.classTarget;
         document.getElementById('set-silver').value = settings.silverLimit;
         document.getElementById('set-gold').value = settings.goldLimit;
+        let tnInput = document.getElementById('set-teacher-name');
+        if(tnInput) tnInput.value = settings.teacherName || "Zeynal Öğretmen";
     }
 }
 
@@ -137,6 +139,11 @@ function updateUI() {
         renderBookManager(); 
         renderRanking(); 
         updateProgressBar(); 
+        let titleEl = document.getElementById('mainTitle');
+        if(titleEl) {
+            if(loginMode === 'teacher') titleEl.innerText = settings.teacherName || "Zeynal Öğretmen";
+            else titleEl.innerText = "Öğrenci Paneli";
+        }
         if(document.getElementById('studentPassList')) renderPassManager();
     } catch(e) {
         console.error("Arayüz güncellenirken hata oluştu:", e);
@@ -643,6 +650,26 @@ function showFruitDetail(rec) {
 }
 function closeBookDetail() { document.getElementById('bookDetailOverlay').style.display = 'none'; }
 
+function navigateReport(direction) {
+    if (students.length === 0) return;
+    students.sort();
+    let inputEl = document.getElementById('reportStudentInput');
+    let currentVal = inputEl.value.trim().toLocaleUpperCase('tr-TR');
+    let idx = students.indexOf(currentVal);
+    
+    if (idx === -1) {
+        idx = direction > 0 ? 0 : students.length - 1;
+    } else {
+        idx += direction;
+        if (idx < 0) idx = students.length - 1;
+        if (idx >= students.length) idx = 0;
+    }
+    
+    inputEl.value = students[idx];
+    handleInput(inputEl);
+    genReport();
+}
+
 function genReport() { 
     const s = document.getElementById('reportStudentInput').value.trim().toLocaleUpperCase('tr-TR'); 
     if(!s) return; 
@@ -652,6 +679,7 @@ function genReport() {
     let history = myRecs.filter(r => r.status === "İade Etti").reverse(); 
     let totalP = 0; 
     history.forEach(r => totalP += (parseInt(bookPages[r.book])||0)); 
+    let teacherNameStr = settings.teacherName || "Zeynal Öğretmen";
     let txt = `Sayın Velimiz,\n\n✨ "Her kitap keşfedilmeyi bekleyen ayrı bir dünyadır."\n\nÖğrencimiz *${s}*, bu dönem kütüphanemizden toplam *${myRecs.length}* kitap okuyarak yeni dünyalar keşfetmiştir.\nToplam Okunan Sayfa: *${totalP}*\n\n`; 
     if (currentlyReading.length > 0) { txt += `⏳ *Şu An Okuduğu:* \n`; currentlyReading.forEach(r => { txt += `- ${r.book} (Alış: ${r.date})\n`; }); txt += `\n`; } 
     if (history.length > 0) { 
@@ -659,7 +687,7 @@ function genReport() {
         // Liste tersine çevrildiği için sıralamanın büyükten küçüğe (Örn: 30, 29, 28...) görünmesini sağlıyoruz.
         history.forEach((r, i) => { txt += `✅ ${history.length - i}. ${r.book}\n`; }); 
     } 
-    txt += `\nİlginiz ve desteğiniz için teşekkür ederiz.\nZeynal Öğretmen`; 
+    txt += `\nİlginiz ve desteğiniz için teşekkür ederiz.\n${teacherNameStr}`; 
     document.getElementById('reportOutput').innerText = txt; 
     renderSpaceJourney(myRecs.length, 'spaceJourney', 'journeySvg'); 
 }
@@ -694,7 +722,7 @@ function renderSpaceJourney(count, containerId, svgId) {
     }); 
 }
 
-function saveSettings() { let t = parseInt(document.getElementById('set-target').value); let s = parseInt(document.getElementById('set-silver').value); let g = parseInt(document.getElementById('set-gold').value); if(!t || !s || !g) { alert("Lütfen geçerli sayılar girin."); return; } settings.classTarget = t; settings.silverLimit = s; settings.goldLimit = g; updateUI(); syncData(); alert("Ayarlar kaydedildi!"); }
+function saveSettings() { let tn = document.getElementById('set-teacher-name').value.trim() || "Zeynal Öğretmen"; let t = parseInt(document.getElementById('set-target').value); let s = parseInt(document.getElementById('set-silver').value); let g = parseInt(document.getElementById('set-gold').value); if(!t || !s || !g) { alert("Lütfen geçerli sayılar girin."); return; } settings.teacherName = tn; settings.classTarget = t; settings.silverLimit = s; settings.goldLimit = g; updateUI(); syncData(); alert("Ayarlar kaydedildi!"); }
 
 function addSingleStudent() { 
     let name = document.getElementById('single-student-add').value.trim().toLocaleUpperCase('tr-TR'); 
@@ -712,6 +740,13 @@ function updateStudentPass(name, newPass) { studentPassObj[name] = newPass; sync
 function addNewBook() { let name = stripRating(document.getElementById('newBookInput').value); if(!name) return alert("Kitap adı girin."); let page = prompt("Sayfa sayısı:", "100"); if(!books.includes(name)) { books.push(name); books.sort(); } bookPages[name] = parseInt(page) || 0; document.getElementById('newBookInput').value = ""; updateUI(); syncData(); }
 function delSingleBook(name) { if(confirm(name + " kitabı silinsin mi?")) { books = books.filter(b => b !== name); delete bookPages[name]; updateUI(); syncData(); } }
 function copyReport() { navigator.clipboard.writeText(document.getElementById('reportOutput').innerText); alert("Kopyalandı!"); }
+function shareToWhatsApp() {
+    let text = document.getElementById('reportOutput').innerText;
+    if(!text || text === "...") return alert("Önce bir öğrenci seçin.");
+    navigator.clipboard.writeText(text); // Kopyala
+    let url = "https://wa.me/?text=" + encodeURIComponent(text);
+    window.open(url, '_blank');
+}
 function populateDatalists() { 
     let sl = document.getElementById('studentList'); sl.innerHTML = ''; 
     let sLogin = document.getElementById('studentListLogin'); if(sLogin) sLogin.innerHTML = ''; 
@@ -773,12 +808,11 @@ function updateDynamicBookList() {
     });
 
     bookInfoList.forEach(item => {
-        let readIcon = item.isRead ? "🟢" : "🔴";
-        let statusIcon = item.isOut ? "🚫" : "📗";
+        let readIcon = item.isRead ? "✅" : "✖️";
+        let statusIcon = item.isOut ? "" : " 📗"; // Only show icon if in library
         let ratingStr = item.avgStr != 0 ? `⭐${item.avgStr}` : "⭐0";
         
-        // Örn: "🔴 📗 ⭐4,5 - Küçük Prens"
-        let displayStr = `${readIcon} ${statusIcon} ${ratingStr} - ${item.name}`;
+        let displayStr = `${readIcon}${statusIcon} ${ratingStr} - ${item.name}`;
         bl.innerHTML += `<option value="${displayStr}"></option>`;
     });
 }
@@ -1026,7 +1060,7 @@ function deleteRecord(id) {
                 <div class="date-stamp">${new Date().toLocaleDateString('tr-TR')}</div>
                 <div class="signature">
                     <div class="sig-line"></div>
-                    <div class="sig-name">Zeynal Öğretmen</div>
+                    <div class="sig-name">${settings.teacherName || "Zeynal Öğretmen"}</div>
                 </div>
             </div>
         </div>

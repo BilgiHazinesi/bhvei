@@ -159,21 +159,11 @@
             <div id="tab-report" class="section">
                 <div class="glass-panel">
                     <h3 style="margin:0 0 15px 0; color:var(--primary);">Motivasyon Raporu</h3>
-                    <div style="display: flex; gap: 5px; align-items: center; margin-bottom: 10px;">
-                        <button class="btn" style="background: var(--input-bg); color: var(--primary); padding: 8px; border: var(--glass-border);" onclick="navigateReport(-1)" title="Önceki Öğrenci"><i class="fas fa-chevron-left"></i></button>
-                        <div class="input-wrapper" style="flex: 1; margin-bottom: 0;">
-                            <input type="text" list="studentList" id="reportStudentInput" placeholder="Öğrenci Seçiniz..." autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" oninput="handleInput(this); genReport()">
-                            <i class="fas fa-times-circle clear-btn" onclick="clearField('reportStudentInput')"></i>
-                        </div>
-                        <button class="btn" style="background: var(--input-bg); color: var(--primary); padding: 8px; border: var(--glass-border);" onclick="navigateReport(1)" title="Sonraki Öğrenci"><i class="fas fa-chevron-right"></i></button>
-                    </div>
+                    <div class="input-wrapper"><input type="text" list="studentList" id="reportStudentInput" placeholder="Öğrenci Seçiniz..." autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" oninput="handleInput(this); genReport()"><i class="fas fa-times-circle clear-btn" onclick="clearField('reportStudentInput')"></i></div>
                     <div id="reportOutput" style="background:var(--input-bg); padding:15px; border-radius:12px; margin:15px 0; white-space:pre-wrap; font-size:0.9rem; color:var(--text-main); border:var(--glass-border);">...</div>
-                    <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-                        <button class="btn btn-primary" style="flex: 1; background-color: #10b981;" onclick="shareToWhatsApp()"><i class="fab fa-whatsapp"></i> Kopyala ve WhatsApp</button>
-                    </div>
                     <div style="display: flex; gap: 10px;">
-                        <button class="btn btn-primary" style="flex: 1;" onclick="copyReport()"><i class="far fa-copy"></i> Sadece Kopyala</button>
-                        <button class="btn btn-primary" style="flex: 1; background-color: #8b5cf6;" onclick="printCertificate()"><i class="fas fa-file-pdf"></i> Belge</button>
+                        <button class="btn btn-primary" style="flex: 1;" onclick="copyReport()"><i class="far fa-copy"></i> Metni Kopyala</button>
+                        <button class="btn btn-primary" style="flex: 1; background-color: #8b5cf6;" onclick="printCertificate()"><i class="fas fa-file-pdf"></i> Belge Yazdır/İndir</button>
                     </div>
                     <div class="journey-container" id="spaceJourney"><div class="stars"></div><svg class="svg-path" id="journeySvg"></svg></div>
                 </div>
@@ -190,7 +180,6 @@
             <div id="tab-settings" class="section">
                 <div class="glass-panel">
                     <h3 style="margin:0 0 15px 0; color:var(--primary);">⚙️ Genel Ayarlar</h3>
-                    <label class="setting-label">Öğretmen / Sınıf Adı</label><div class="input-wrapper"><input type="text" id="set-teacher-name" placeholder="Örn: Onur Öğretmen"></div>
                     <label class="setting-label">Sınıf Kitap Hedefi</label><div class="input-wrapper"><input type="number" id="set-target" placeholder="Örn: 500"></div>
                     <div class="setting-row"><div style="flex:1"><label class="setting-label">Gümüş Madalya</label><input type="number" id="set-silver" placeholder="3"></div><div style="flex:1"><label class="setting-label">Altın Madalya</label><input type="number" id="set-gold" placeholder="5"></div></div>
                     <button class="btn btn-primary" onclick="saveSettings()">Ayarları Kaydet</button>
@@ -206,6 +195,11 @@
                     
                     <div class="divider-text" style="color:#ef4444;">Silme İşlemleri</div>
                     <div style="display:flex; gap:5px;"><input type="text" list="studentList" id="single-student-del" placeholder="Silinecek Öğrenci..." style="flex:1;"><button class="btn btn-danger" style="width:auto; margin-bottom:0;" onclick="delSingleStudent()">Sil</button></div>
+                </div>
+                <div class="glass-panel" style="border: 1px solid rgba(16, 185, 129, 0.3);">
+                    <h3 style="margin:0 0 15px 0; color:#10b981;">📦 Veri Taşıma</h3>
+                    <p style="font-size:0.8rem; color:var(--text-sub); margin-bottom:10px;">Eski sistemdeki verilerinizi bu yeni sınıfa aktarmak için aşağıdaki butonu kullanın. Sadece bir kez yapmanız yeterlidir.</p>
+                    <button class="btn btn-primary" style="background-color:#10b981;" onclick="migrateOldData()">🔥 Eski Verileri Bu Sınıfa Aktar</button>
                 </div>
                 <div class="glass-panel" style="border: 1px solid rgba(220, 38, 38, 0.3);"><h3 style="margin:0 0 15px 0; color:#ef4444;">⚠️ Tehlikeli Bölge</h3><button class="btn btn-danger" onclick="resetAllData()">Tüm Verileri Sıfırla</button></div>
             </div>
