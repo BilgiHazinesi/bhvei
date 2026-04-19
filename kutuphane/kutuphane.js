@@ -562,6 +562,7 @@ function renderHistory() {
                     let dateColor = "inherit";
                     let dateIndicator = "";
 
+                    let waBtn = "";
                     if (diffDays <= 4) {
                         dateColor = "#10b981"; 
                         dateIndicator = "🟢 ";
@@ -571,9 +572,11 @@ function renderHistory() {
                     } else {
                         dateColor = "#ef4444"; 
                         dateIndicator = "🔴 ";
+                        // Add WhatsApp reminder button
+                        waBtn = `<button class="btn" style="background: none; border: none; color: #25d366; cursor: pointer; padding: 0 5px;" onclick="sendOverdueWhatsApp('${r.student.replace(/'/g, "\'")}', '${r.book.replace(/'/g, "\'")}')" title="Veliye WhatsApp'tan Hatırlat"><i class="fab fa-whatsapp" style="font-size: 1.2rem;"></i></button>`;
                     }
 
-                    dateDisplay = `<span style="color:${dateColor}; font-weight:bold;">${dateIndicator}<i class="far fa-calendar-alt" style="margin-right:4px;"></i>${r.date}</span>`;
+                    dateDisplay = `<div style="display:flex; align-items:center;"><span style="color:${dateColor}; font-weight:bold;">${dateIndicator}<i class="far fa-calendar-alt" style="margin-right:4px;"></i>${r.date}</span> ${waBtn}</div>`;
                 }
             }
 
@@ -747,6 +750,21 @@ function shareToWhatsApp() {
     let url = "https://wa.me/?text=" + encodeURIComponent(text);
     window.open(url, '_blank');
 }
+function sendOverdueWhatsApp(student, book) {
+    let teacherNameStr = settings.teacherName || "Zeynal Öğretmen";
+    let text = `Sayın Velim,
+
+Öğrencimiz *${student}*, kütüphanemizden almış olduğu *"${book}"* adlı kitabı belirtilen süre içerisinde henüz teslim etmemiştir.
+
+Kitabın okunup en kısa sürede kütüphaneye iade edilmesi konusunda desteğinizi rica ederim.
+
+İyi günler dilerim.
+${teacherNameStr}`;
+    navigator.clipboard.writeText(text);
+    let url = "https://wa.me/?text=" + encodeURIComponent(text);
+    window.open(url, '_blank');
+}
+
 function populateDatalists() {
     let sl = document.getElementById('studentList'); sl.innerHTML = '';
     let sLogin = document.getElementById('studentListLogin'); if(sLogin) sLogin.innerHTML = '';
