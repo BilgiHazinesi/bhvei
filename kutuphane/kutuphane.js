@@ -175,6 +175,17 @@ function returnBook(id) {
     studentRateBook(id); 
 }
 
+function quickReturn(id) {
+    let rec = records.find(r => r.id === String(id));
+    if(!rec) return alert("Kayıt bulunamadı.");
+
+    rec.status = "İade Etti";
+    rec.returnDate = getLocalTime();
+
+    updateUI();
+    syncData();
+}
+
 function submitReturn() {
     if (!tempReturnId) return;
 
@@ -531,16 +542,26 @@ function logoutApp() {
 }
 
 function lendBook() { 
-    const s = document.getElementById('studentInput').value.trim().toLocaleUpperCase('tr-TR'); 
-    const b = stripRating(document.getElementById('bookInput').value);
+    const sInput = document.getElementById('studentInput');
+    const bInput = document.getElementById('bookInput');
+    const s = sInput.value.trim().toLocaleUpperCase('tr-TR');
+    const b = stripRating(bInput.value);
+
     if(!s || !b) { alert("Eksik bilgi!"); return; } 
     if(!students.includes(s)) { students.push(s); students.sort(); } 
     if(!books.includes(b)) books.push(b); 
+
     records.unshift({ id: String(Date.now()), date: getLocalTime(), student: s, book: b, status: "Okuyor", returnDate: "-" }); 
-    document.getElementById('bookInput').value = ""; 
-    handleInput(document.getElementById('bookInput')); 
+
+    bInput.value = "";
+    sInput.value = "";
+    handleInput(bInput);
+    handleInput(sInput);
+
     updateUI(); 
     syncData(); 
+
+    sInput.focus();
 }
 
 function renderHistory() { 
@@ -559,7 +580,7 @@ function renderHistory() {
         let dateDisplay = `<i class="far fa-calendar-alt" style="opacity:0.7; margin-right:4px;"></i>${r.date}`; 
 
         if (r.status === "Okuyor") { 
-            actionBtn = `<div style="display:flex; gap:5px;"><button class="btn-return" onclick="returnBook('${r.id}')">İade Al</button><button class="btn-delete" style="width:36px; height:36px; padding:0; display:flex; align-items:center; justify-content:center;" onclick="deleteRecord('${r.id}')" title="Hatalı kaydı sil"><i class="fas fa-trash"></i></button></div>`;
+            actionBtn = `<div style="display:flex; gap:5px;"><button class="btn-return" onclick="returnBook('${r.id}')">İade Al</button><button class="btn-return" style="background:#8b5cf6; width:36px; height:36px; padding:0; display:flex; align-items:center; justify-content:center;" onclick="quickReturn('${r.id}')" title="Hızlı İade (Yorumsuz)"><i class="fas fa-bolt"></i></button><button class="btn-delete" style="width:36px; height:36px; padding:0; display:flex; align-items:center; justify-content:center;" onclick="deleteRecord('${r.id}')" title="Hatalı kaydı sil"><i class="fas fa-trash"></i></button></div>`;
             
             if (r.date) {
                 let datePart = r.date.split(' ')[0];
