@@ -168,6 +168,15 @@
             <div id="tab-report" class="section">
                 <div class="glass-panel">
                     <h3 style="margin:0 0 15px 0; color:var(--primary);">Motivasyon Raporu</h3>
+
+                    <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                        <button class="btn btn-primary" style="flex: 1; background-color: #10b981;" onclick="shareToWhatsApp()"><i class="fab fa-whatsapp"></i> Kopyala ve WhatsApp</button>
+                    </div>
+                    <div style="display: flex; gap: 10px; margin-bottom: 15px; border-bottom: 1px solid rgba(0,0,0,0.1); padding-bottom: 15px;">
+                        <button class="btn btn-primary" style="flex: 1;" onclick="copyReport()"><i class="far fa-copy"></i> Sadece Kopyala</button>
+                        <button class="btn btn-primary" style="flex: 1; background-color: #8b5cf6;" onclick="printCertificate()"><i class="fas fa-file-pdf"></i> Belge</button>
+                    </div>
+
                     <div style="display: flex; gap: 5px; align-items: center; margin-bottom: 10px;">
                         <button class="btn" style="background: var(--input-bg); color: var(--primary); padding: 8px; border: var(--glass-border);" onclick="navigateReport(-1)" title="Önceki Öğrenci"><i class="fas fa-chevron-left"></i></button>
                         <div class="input-wrapper" style="flex: 1; margin-bottom: 0;">
@@ -176,14 +185,8 @@
                         </div>
                         <button class="btn" style="background: var(--input-bg); color: var(--primary); padding: 8px; border: var(--glass-border);" onclick="navigateReport(1)" title="Sonraki Öğrenci"><i class="fas fa-chevron-right"></i></button>
                     </div>
+
                     <div id="reportOutput" style="background:var(--input-bg); padding:15px; border-radius:12px; margin:15px 0; white-space:pre-wrap; font-size:0.9rem; color:var(--text-main); border:var(--glass-border);">...</div>
-                    <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-                        <button class="btn btn-primary" style="flex: 1; background-color: #10b981;" onclick="shareToWhatsApp()"><i class="fab fa-whatsapp"></i> Kopyala ve WhatsApp</button>
-                    </div>
-                    <div style="display: flex; gap: 10px;">
-                        <button class="btn btn-primary" style="flex: 1;" onclick="copyReport()"><i class="far fa-copy"></i> Sadece Kopyala</button>
-                        <button class="btn btn-primary" style="flex: 1; background-color: #8b5cf6;" onclick="printCertificate()"><i class="fas fa-file-pdf"></i> Belge</button>
-                    </div>
                     <div class="journey-container" id="spaceJourney"><div class="stars"></div><svg class="svg-path" id="journeySvg"></svg></div>
                 </div>
             </div>
