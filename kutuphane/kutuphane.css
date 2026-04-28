@@ -149,3 +149,4 @@ body.dark-mode .fruit-detail-modal { background: rgba(30, 41, 59, 0.95); color: 
         print-color-adjust: exact;
     }
 }
+.desk-return-chk { width: 18px; height: 18px; margin: 0; }
