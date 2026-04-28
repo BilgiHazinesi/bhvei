@@ -124,10 +124,19 @@
             
             <div id="tab-lend" class="section active">
                 <div class="glass-panel">
-                    <h3 style="margin:0 0 15px 0; color:var(--primary);">Hızlı İşlem</h3>
-                    <div class="input-wrapper"><input type="text" list="studentList" id="studentInput" placeholder="Öğrenci Seçiniz..." autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" oninput="handleInput(this); renderHistory();" onchange="updateDynamicBookList()" onkeydown="if(event.key === 'Enter') document.getElementById('bookInput').focus();"><i class="fas fa-times-circle clear-btn" onclick="clearField('studentInput', () => { renderHistory(); updateDynamicBookList(); })"></i></div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                        <h3 style="margin:0; color:var(--primary);">Hızlı İşlem</h3>
+                        <label style="font-size:0.85rem; color:var(--text-sub); display:flex; align-items:center; gap:5px; cursor:pointer;">
+                            <input type="checkbox" id="allClassCheck" onchange="toggleAllClass()"> Tüm Sınıf
+                        </label>
+                    </div>
+                    <p style="font-size:0.75rem; color:var(--text-sub); margin-bottom:10px; margin-top:-10px;">Çoklu işlem için isim/kitap arasına virgül (,) koyun.</p>
+                    <div class="input-wrapper"><input type="text" list="studentList" id="studentInput" placeholder="Öğrenci Seçiniz (Ali, Ayşe...)" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" oninput="handleInput(this); renderHistory();" onchange="updateDynamicBookList()" onkeydown="if(event.key === 'Enter') document.getElementById('bookInput').focus();"><i class="fas fa-times-circle clear-btn" onclick="clearField('studentInput', () => { renderHistory(); updateDynamicBookList(); })"></i></div>
                     <div class="input-wrapper"><input type="text" list="bookList" id="bookInput" placeholder="Kitap Seçiniz..." autocomplete="off" autocorrect="off" spellcheck="false" oninput="handleInput(this)" onkeydown="if(event.key === 'Enter') lendBook();"><i class="fas fa-times-circle clear-btn" onclick="clearField('bookInput')"></i></div>
-                    <button class="btn btn-primary" onclick="lendBook()">Kitabı Teslim Et</button>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn btn-primary" style="flex: 1;" onclick="lendBook()">Kitabı Ver</button>
+                        <button class="btn btn-primary" style="flex: 1; background-color: #f59e0b;" onclick="bulkReturnBooks()">Kitabı Geri Al</button>
+                    </div>
                 </div>
                 <div class="glass-panel">
                     <div style="display:flex; justify-content:space-between; margin-bottom:10px;"><h4 style="margin:0; color:var(--text-main);">Son Hareketler</h4><span id="syncStatus" style="font-size:0.75rem; color:var(--text-sub); opacity:0.7;">Senkronize</span></div>
