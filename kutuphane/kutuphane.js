@@ -624,14 +624,14 @@ function bulkReturnBooks() {
     let targetBooks = getTargetBooks(bVal);
 
     if(targetStudents.length === 0) { alert("İade alacak öğrenci(leri) belirtin!"); return; }
+    if(targetBooks.length === 0) { alert("Lütfen iade alınacak spesifik kitabı veya kitapları belirtin!"); return; }
 
     let timeStr = getLocalTime();
     let returnedCount = 0;
 
     records.forEach(r => {
         if (r.status === "Okuyor" && targetStudents.includes(r.student)) {
-            // If books are specified, only return those. Otherwise return ALL open books for student.
-            if (targetBooks.length === 0 || targetBooks.includes(r.book)) {
+            if (targetBooks.includes(r.book)) {
                 r.status = "İade Etti";
                 r.returnDate = timeStr;
                 returnedCount++;
