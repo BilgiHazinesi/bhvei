@@ -1,3 +1,8 @@
+
+function sanitizeFirebaseKey(str) {
+    if (!str) return "";
+    return str.toString().replace(/[\.#$\[\]/]/g, "").trim();
+}
 // --- ZEYNAL ÖĞRETMEN V64 (FIREBASE ENTEGRASYONU) ---
 
 // Firebase Configuration
@@ -16,10 +21,10 @@ const firebaseConfig = {
 
 // Initialize Firebase (eğer henüz başlatılmadıysa)
 if (!firebase.apps.length) {
-    firebase.initializeApp(firebaseConfig);
+    try { firebase.initializeApp(firebaseConfig); } catch(e) {}
 }
 
-const db = firebase.database();
+const db = typeof firebase !== 'undefined' ? firebase.database() : window.db;
 const auth = firebase.auth();
 let DB_REF = ""; // Dinamik olarak atanacak (örn: /classes/UID)
 let currentClassCode = "";
@@ -595,26 +600,86 @@ function syncData() {
             syncEl.innerHTML = `<i class="fas fa-spinner fa-spin" style="color:#ef4444;"></i> <span style="color:#ef4444; font-weight:bold;">Kaydediliyor...</span>`;
         }
 
+
         const payload = {
-            students: students,
-            studentPass: studentPassObj,
-            books: books,
-            bookPages: bookPages,
-            records: records,
-            settings: settings
+            students: students || [],
+            studentPass: studentPassObj || {},
+            books: books || [],
+            bookPages: bookPages || {},
+            records: records || [],
+            settings: settings || {}
         };
 
-        db.ref(DB_REF).set(payload).then(() => {
-            if(syncEl) {
-                syncEl.innerHTML = `<i class="fas fa-check-circle" style="color:#10b981;"></i> <span style="color:#10b981; font-weight:bold;">Senkronize</span>`;
-                setTimeout(() => { syncEl.style.opacity = "0.7"; }, 3000);
+        // Deep clone and sanitize EVERYTHING before Firebase write
+        const cleanPayload = {
+            students: [],
+            studentPass: {},
+            books: [],
+            bookPages: {},
+            records: [],
+            settings: payload.settings
+        };
+
+        // Students
+        payload.students.forEach(s => {
+            const cleanS = sanitizeFirebaseKey(s);
+            if(cleanS && !cleanPayload.students.includes(cleanS)) {
+                cleanPayload.students.push(cleanS);
             }
-        }).catch(err => {
-            if(syncEl) {
-                syncEl.innerHTML = `<i class="fas fa-times-circle" style="color:#ef4444;"></i> <span style="color:#ef4444; font-weight:bold;">Bağlantı Hatası!</span>`;
-            }
-            console.error("Senkronizasyon Hatası:", err);
         });
+
+        // Student Passwords
+        Object.keys(payload.studentPass).forEach(sName => {
+            const cleanName = sanitizeFirebaseKey(sName);
+            if(cleanName) {
+                cleanPayload.studentPass[cleanName] = payload.studentPass[sName];
+            }
+        });
+
+        // Books
+        payload.books.forEach(b => {
+            const cleanB = sanitizeFirebaseKey(b);
+            if(cleanB && !cleanPayload.books.includes(cleanB)) {
+                cleanPayload.books.push(cleanB);
+            }
+        });
+
+        // Book Pages
+        Object.keys(payload.bookPages).forEach(bName => {
+            const cleanName = sanitizeFirebaseKey(bName);
+            if(cleanName) {
+                let val = payload.bookPages[bName];
+                cleanPayload.bookPages[cleanName] = (val === undefined || val === null) ? 100 : val;
+            }
+        });
+
+        // Records
+        payload.records.forEach(r => {
+            let cleanRecord = JSON.parse(JSON.stringify(r)); // Clone object
+            if (cleanRecord.book) cleanRecord.book = sanitizeFirebaseKey(cleanRecord.book);
+            if (cleanRecord.student) cleanRecord.student = sanitizeFirebaseKey(cleanRecord.student);
+            cleanPayload.records.push(cleanRecord);
+        });
+
+        try {
+            db.ref(DB_REF).set(cleanPayload).then(() => {
+                if(syncEl) {
+                    syncEl.innerHTML = `<i class="fas fa-check-circle" style="color:#10b981;"></i> <span style="color:#10b981; font-weight:bold;">Senkronize</span>`;
+                    setTimeout(() => { syncEl.style.opacity = "0.7"; }, 3000);
+                }
+            }).catch(err => {
+                if(syncEl) {
+                    syncEl.innerHTML = `<i class="fas fa-times-circle" style="color:#ef4444;"></i> <span style="color:#ef4444; font-weight:bold;">Bağlantı Hatası!</span>`;
+                }
+                console.error("Senkronizasyon Hatası (Promise):", err);
+            });
+        } catch(err) {
+            if(syncEl) {
+                syncEl.innerHTML = `<i class="fas fa-times-circle" style="color:#ef4444;"></i> <span style="color:#ef4444; font-weight:bold;">Veri Hatası! (Geçersiz Karakter)</span>`;
+            }
+            console.error("Senkronizasyon Hatası (Senkron):", err);
+            alert("Kaydedilemedi! Kitap veya öğrenci adında geçersiz karakterler (. # $ [ ] /) bulunuyor olabilir. Lütfen düzeltin.");
+        }
     }, 1500); // 1.5 saniye bekle
 }
 
@@ -815,7 +880,7 @@ function updateCardPrompt() { let val = document.getElementById('exitCardSelect'
 function closeRatingModal() { document.getElementById('ratingOverlay').style.display = 'none'; tempReturnId = null; }
 
 function toggleEditMode() { isEditMode = !isEditMode; document.getElementById('editToggleBtn').classList.toggle('active'); document.getElementById('editToggleBtn').innerText = isEditMode ? '✅ Bitir' : '✏️ Düzenle'; renderBookManager(); }
-function saveBookEdits(index) { let oldName = books[index]; let nameInput = document.getElementById(`edit-name-${index}`); let pageInput = document.getElementById(`edit-page-${index}`); if (!nameInput || !pageInput) return; let newName = nameInput.value.trim(); let newPage = parseInt(pageInput.value) || 0; if(!newName) return alert("Kitap adı boş olamaz."); if(newName !== oldName) { books[index] = newName; if(bookPages[oldName]) delete bookPages[oldName]; records.forEach(r => { if(r.book === oldName) r.book = newName; }); } bookPages[newName] = newPage; alert("Kaydedildi!"); books.sort(); renderBookManager(); updateUI(); syncData(); }
+function saveBookEdits(index) { let oldName = books[index]; let nameInput = document.getElementById(`edit-name-${index}`); let pageInput = document.getElementById(`edit-page-${index}`); if (!nameInput || !pageInput) return; let newName = sanitizeFirebaseKey(nameInput.value.trim()); let newPage = parseInt(pageInput.value) || 0; if(!newName) return alert("Kitap adı boş olamaz."); if(newName !== oldName) { books[index] = newName; if(bookPages[oldName]) delete bookPages[oldName]; records.forEach(r => { if(r.book === oldName) r.book = newName; }); } bookPages[newName] = newPage; alert("Kaydedildi!"); books.sort(); renderBookManager(); updateUI(); syncData(); }
 function filterBooks(type, el) { currentFilter = type; document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active')); el.classList.add('active'); renderBookManager(); }
 
 function openBookDetail(bookName) {
@@ -944,7 +1009,8 @@ function delSingleStudent() {
 
 function renderPassManager() { let div = document.getElementById('studentPassList'); div.innerHTML = ""; students.sort().forEach(s => { let pass = studentPassObj[s] || ""; div.innerHTML += `<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:5px; border-bottom:1px solid rgba(0,0,0,0.1); padding:5px;"><span style="font-size:0.9rem; font-weight:600;">${s}</span><input type="text" value="${pass}" placeholder="Şifre Yok" style="width:80px; padding:4px; font-size:0.8rem; text-align:center; border:1px solid #ccc; border-radius:4px;" onchange="updateStudentPass('${s}', this.value)"></div>`; }); }
 function updateStudentPass(name, newPass) { studentPassObj[name] = newPass; syncData(); }
-function addNewBook() { let name = stripRating(document.getElementById('newBookInput').value); if(!name) return alert("Kitap adı girin."); let page = prompt("Sayfa sayısı:", "100"); if(!books.includes(name)) { books.push(name); books.sort(); } bookPages[name] = parseInt(page) || 0; document.getElementById('newBookInput').value = ""; updateUI(); syncData(); }
+function addNewBook() { let name = stripRating(document.getElementById('newBookInput').value);
+    name = sanitizeFirebaseKey(name); if(!name) return alert("Kitap adı girin."); let page = prompt("Sayfa sayısı:", "100"); if(!books.includes(name)) { books.push(name); books.sort(); } bookPages[name] = parseInt(page) || 0; document.getElementById('newBookInput').value = ""; updateUI(); syncData(); }
 function delSingleBook(name) { if(confirm(name + " kitabı silinsin mi?")) { books = books.filter(b => b !== name); delete bookPages[name]; updateUI(); syncData(); } }
 function copyReport() { navigator.clipboard.writeText(document.getElementById('reportOutput').innerText); alert("Kopyalandı!"); }
 function shareToWhatsApp() {
