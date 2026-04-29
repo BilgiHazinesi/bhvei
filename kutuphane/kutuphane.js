@@ -51,6 +51,45 @@ const RANKS = [{c:0, t:"🌱 Başlangıç"}, {c:5, t:"🥉 Okuma Çırağı"}, {
 const EXIT_CARDS = {"1":{title:"Macera Hatırası",prompt:"En unutulmaz sahne neydi?"},"2":{title:"Öğrenen Profil",prompt:"Karakter hangi özelliği taşıyor?"},"3":{title:"Duygu Kartı",prompt:"Hangi duyguları hissettin?"},"4":{title:"Bağlantı Kartı",prompt:"Nasıl bir bağ kurdun?"},"5":{title:"Eleştiri Kartı",prompt:"Katılmadığın bir olay var mı?"},"6":{title:"Soru Kartı",prompt:"Seni düşündüren soru neydi?"},"7":{title:"Yaratıcı Son",prompt:"Sonunu nasıl değiştirirdin?"},"8":{title:"Gelişim Kartı",prompt:"Hangi becerini geliştirdi?"},"9":{title:"Tavsiye Kartı",prompt:"Tavsiye eder misin?"}};
 
 // --- Başlangıç ---
+
+// --- YENİ ALERTS ---
+let confirmCallback = null;
+window.alert = function(msg) {
+    let msgEl = document.getElementById('customAlertMessage');
+    let overlay = document.getElementById('customAlertOverlay');
+    if(msgEl && overlay) {
+        msgEl.innerText = msg;
+        overlay.style.display = 'flex';
+    } else {
+        console.log("Alert:", msg);
+    }
+};
+function closeCustomAlert() {
+    let overlay = document.getElementById('customAlertOverlay');
+    if(overlay) overlay.style.display = 'none';
+}
+window.confirm = function(msg, callback) {
+    if(!callback) {
+        // If no callback provided, fallback to native confirm (some synchronous usages might exist)
+        return window.nativeConfirm ? window.nativeConfirm(msg) : true;
+    }
+    let msgEl = document.getElementById('customConfirmMessage');
+    let overlay = document.getElementById('customConfirmOverlay');
+    if(msgEl && overlay) {
+        msgEl.innerText = msg;
+        confirmCallback = callback;
+        overlay.style.display = 'flex';
+    } else {
+        callback(true); // Fallback
+    }
+};
+function closeCustomConfirm(result) {
+    let overlay = document.getElementById('customConfirmOverlay');
+    if(overlay) overlay.style.display = 'none';
+    if(confirmCallback) confirmCallback(result);
+}
+if(!window.nativeConfirm) window.nativeConfirm = window.confirm;
+
 window.onload = function() {
     console.log("Sistem başlatılıyor... Çoklu Sınıf & Firebase Auth Sürümü");
     if(localStorage.getItem('theme') === 'dark') { document.body.classList.add('dark-mode'); document.getElementById('themeIcon').innerText = '☀️'; } else { document.getElementById('themeIcon').innerText = '🌙'; }
@@ -303,6 +342,36 @@ function renderDesk() {
         stagedBooks.forEach(b => {
             bc.innerHTML += `<div style="display:flex; justify-content:space-between; background:white; padding:5px 10px; border-radius:5px; font-size:0.85rem;"><span>${b}</span> <i class="fas fa-trash" style="color:#ef4444; cursor:pointer;" onclick="unstageBook('${b.replace(/'/g, "\'")}')"></i></div>`;
         });
+    }
+}
+
+
+function giveIndividualBook(studentName, bookNameRaw, inputEl) {
+    let bookName = stripRating(bookNameRaw);
+    if(!bookName) return;
+
+    bookName = sanitizeFirebaseKey(bookName);
+
+    if(!books.includes(bookName)) {
+        books.push(bookName);
+        books.sort();
+    }
+
+    let now = Date.now();
+    let timeStr = getLocalTime();
+
+    records.unshift({ id: String(now), date: timeStr, student: studentName, book: bookName, status: "Okuyor", returnDate: "-" });
+
+    inputEl.value = "";
+    updateUI();
+    syncData();
+
+    // Flash green to indicate success
+    let parentCard = inputEl.closest('div[style*="border-radius:12px"]');
+    if(parentCard) {
+        let origBg = parentCard.style.background;
+        parentCard.style.background = "rgba(16, 185, 129, 0.2)"; // Greenish
+        setTimeout(() => { parentCard.style.background = origBg; }, 300);
     }
 }
 
@@ -1011,7 +1080,7 @@ function renderPassManager() { let div = document.getElementById('studentPassLis
 function updateStudentPass(name, newPass) { studentPassObj[name] = newPass; syncData(); }
 function addNewBook() { let name = stripRating(document.getElementById('newBookInput').value);
     name = sanitizeFirebaseKey(name); if(!name) return alert("Kitap adı girin."); let page = prompt("Sayfa sayısı:", "100"); if(!books.includes(name)) { books.push(name); books.sort(); } bookPages[name] = parseInt(page) || 0; document.getElementById('newBookInput').value = ""; updateUI(); syncData(); }
-function delSingleBook(name) { if(confirm(name + " kitabı silinsin mi?")) { books = books.filter(b => b !== name); delete bookPages[name]; updateUI(); syncData(); } }
+function delSingleBook(name) { confirm(name + " kitabı silinsin mi?", (res) => { if(res) { books = books.filter(b => b !== name); delete bookPages[name]; updateUI(); syncData(); } }); }
 function copyReport() { navigator.clipboard.writeText(document.getElementById('reportOutput').innerText); alert("Kopyalandı!"); }
 function shareToWhatsApp() {
     let text = document.getElementById('reportOutput').innerText;

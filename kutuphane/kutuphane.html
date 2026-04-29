@@ -16,6 +16,27 @@
 
 <div id="library-app-wrapper" style="width:100%; height:100%; position:relative;">
 
+    <!-- Custom Alerts -->
+    <div id="customAlertOverlay" class="overlay-bg" style="display:none; z-index: 10000;">
+        <div class="modal-card" style="max-width: 300px; padding: 20px;">
+            <h3 id="customAlertTitle" style="margin: 0 0 10px 0; color: var(--primary);">Bilgi</h3>
+            <p id="customAlertMessage" style="margin-bottom: 20px; font-size: 0.95rem; color: var(--text-main);"></p>
+            <button class="btn btn-primary" onclick="closeCustomAlert()">Tamam</button>
+        </div>
+    </div>
+
+    <div id="customConfirmOverlay" class="overlay-bg" style="display:none; z-index: 10000;">
+        <div class="modal-card" style="max-width: 320px; padding: 20px;">
+            <h3 id="customConfirmTitle" style="margin: 0 0 10px 0; color: #f59e0b;">Onay</h3>
+            <p id="customConfirmMessage" style="margin-bottom: 20px; font-size: 0.95rem; color: var(--text-main);"></p>
+            <div style="display:flex; gap:10px;">
+                <button class="btn btn-danger" style="flex:1; margin-bottom:0;" onclick="closeCustomConfirm(false)">İptal</button>
+                <button class="btn btn-primary" style="flex:1; margin-bottom:0;" onclick="closeCustomConfirm(true)">Tamam</button>
+            </div>
+        </div>
+    </div>
+
+
     <div id="loginOverlay" class="overlay-bg">
         <div class="modal-card">
             <h2 style="margin: 0 0 10px 0; color: var(--text-main);">Kütüphane Girişi</h2>
@@ -130,35 +151,40 @@
                         <button class="btn btn-danger" style="margin:0; padding:5px 10px; font-size:0.8rem;" onclick="clearStagingDesk()">Masayı Temizle</button>
                     </div>
 
+
                     <div class="input-wrapper" style="margin-bottom: 10px;">
                         <input type="text" list="studentList" id="stageStudentInput" placeholder="Sıradaki öğrencinin adını yaz ve Enter'a bas..." autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" onchange="stageStudentFromInput()" onkeydown="if(event.key === 'Enter') stageStudentFromInput();">
                     </div>
 
-                    <div id="stagedStudentsContainer" style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:15px; padding:10px; background:rgba(0,0,0,0.05); border-radius:8px; min-height:40px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin: 15px 0 5px 0;">
+                        <h4 style="margin:0; color:var(--text-main);">Öğrenci Listesi (<span id="lendTargetCount">0</span>)</h4>
+                    </div>
+
+                    <div id="stagedStudentsContainer" style="display:flex; flex-direction:column; gap:8px; margin-bottom:15px; padding:10px; background:rgba(0,0,0,0.05); border-radius:8px; min-height:40px;">
                         <div style="color:var(--text-sub); font-size:0.8rem; width:100%; text-align:center; opacity:0.7;">Henüz öğrenci eklenmedi.</div>
                     </div>
 
                     <div id="deskActionArea" style="display:none;">
                         <div class="login-tabs" style="margin-bottom:10px;">
                             <button class="login-tab active" id="deskTabReturn" onclick="switchDeskTab('return')">İade Alınacaklar</button>
-                            <button class="login-tab" id="deskTabLend" onclick="switchDeskTab('lend')">Yeni Kitap Ver</button>
+                            <button class="login-tab" id="deskTabLend" onclick="switchDeskTab('lend')">Toplu Kitap Ver</button>
                         </div>
 
                         <div id="deskReturnPanel">
-                            <div id="deskReturnList" style="margin-bottom:10px; max-height:250px; overflow-y:auto; border:1px solid rgba(0,0,0,0.1); border-radius:8px; padding:5px;"></div>
-                            <button class="btn btn-primary" style="background-color:#f59e0b;" onclick="startSequentialReturn()">Seçili Kitapları İade Al ve Puanla</button>
+                            <div id="deskReturnList" style="margin-bottom:10px;"></div>
+                            <button class="btn btn-primary" onclick="startSequentialReturn()">Seçili Kitapları İade Al</button>
                         </div>
 
-                        <div id="deskLendPanel" style="display:none;">
-                            <p style="font-size:0.8rem; color:var(--text-sub); margin-bottom:5px;">Aşağıdaki listeye eklediğiniz kitaplar, seçili olan <b id="lendTargetCount">0</b> öğrenciye verilecektir.</p>
-                            <div class="input-wrapper" style="margin-bottom:5px;">
+                        <div id="deskLendPanel" style="display:none; text-align:center; padding: 15px; background:rgba(59,130,246,0.05); border-radius:12px;">
+                            <h4 style="margin:0 0 10px 0; color:var(--primary);">Hepsine Aynı Kitabı Ver</h4>
+                            <div class="input-wrapper" style="margin-bottom:10px;">
                                 <input type="text" list="bookList" id="stageBookInput" placeholder="Kitap Seç ve Enter'a bas..." autocomplete="off" autocorrect="off" spellcheck="false" onchange="stageBookFromInput()" onkeydown="if(event.key === 'Enter') stageBookFromInput();">
                             </div>
-                            <div id="stagedBooksContainer" style="display:flex; flex-direction:column; gap:5px; margin-bottom:10px; padding:5px; background:rgba(59,130,246,0.05); border-radius:8px; min-height:30px;"></div>
-                            <button class="btn btn-primary" onclick="submitStagedLends()">Kitapları Masadaki Öğrencilere Ver</button>
+                            <div id="stagedBooksContainer" style="display:flex; flex-direction:column; gap:5px; margin-bottom:10px; padding:5px; background:rgba(255,255,255,0.5); border-radius:8px; min-height:30px;"></div>
+                            <button class="btn btn-primary" onclick="submitStagedLends()">Seçilen Kitapları Tüm Listeye Ver</button>
                         </div>
                     </div>
-                </div>
+
 
                 <div class="glass-panel">
                     <div style="display:flex; justify-content:space-between; margin-bottom:10px;"><h4 style="margin:0; color:var(--text-main);">Tüm Hareketler</h4><span id="syncStatus" style="font-size:0.75rem; color:var(--text-sub); opacity:0.7;">Senkronize</span></div>
@@ -167,26 +193,35 @@
                 </div>
             </div>
 
+
             <div id="tab-books" class="section">
                 <div class="glass-panel">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-                    <div class="filter-group" style="margin-bottom:0; flex:1;">
+                    <h4 style="margin:0 0 10px 0; color:var(--text-main);">Yeni Kitap Ekle</h4>
+                    <div style="display:flex; gap:10px;">
+                        <div class="input-wrapper" style="flex:1; margin-bottom:0;"><input type="text" id="newBookInput" placeholder="Kitap Adı..." oninput="handleInput(this)"><i class="fas fa-times-circle clear-btn" onclick="clearField('newBookInput')"></i></div>
+                        <button class="btn btn-primary" style="margin-bottom:0; width:auto; padding:0 20px;" onclick="addNewBook()">Ekle</button>
+                    </div>
+                </div>
+
+                <div class="glass-panel">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                        <h4 style="margin:0; color:var(--primary);">Kitaplar (<span id="bookCountLabel">0</span>)</h4>
+                        <button class="btn-edit-toggle" id="editToggleBtn" onclick="toggleEditMode()">✏️ Düzenle</button>
+                    </div>
+
+                    <div class="filter-group" style="margin-bottom:15px; flex-wrap:wrap;">
                         <div class="filter-chip active" onclick="filterBooks('all', this)">Tümü</div>
+                        <div class="filter-chip" onclick="filterBooks('in', this)">Kitaplıkta</div>
                         <div class="filter-chip" onclick="filterBooks('out', this)">Dışarıda</div>
                         <div class="filter-chip" onclick="filterBooks('rating', this)">Puan</div>
                         <div class="filter-chip" onclick="filterBooks('latest_review', this)">Son Yorum</div>
                     </div>
-                    <button class="btn-edit-toggle" id="editToggleBtn" onclick="toggleEditMode()">✏️ Düzenle</button>
-                    </div>
+
                     <div class="input-wrapper"><input type="text" id="bookSearch" placeholder="Kitap Ara..." onkeyup="handleInput(this); renderBookManager()"><i class="fas fa-times-circle clear-btn" onclick="clearField('bookSearch', renderBookManager)"></i></div>
                     <div id="bookManagerList"></div>
                 </div>
-                <div class="glass-panel">
-                    <h4 style="margin:0 0 10px 0; color:var(--text-main);">Yeni Kitap Ekle</h4>
-                    <div class="input-wrapper"><input type="text" id="newBookInput" placeholder="Kitap Adı..." oninput="handleInput(this)"><i class="fas fa-times-circle clear-btn" onclick="clearField('newBookInput')"></i></div>
-                    <button class="btn btn-primary" onclick="addNewBook()">Ekle</button>
-                </div>
             </div>
+
 
             <div id="tab-report" class="section">
                 <div class="glass-panel">
