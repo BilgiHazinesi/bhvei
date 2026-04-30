@@ -568,14 +568,57 @@ function logoutApp() {
 function toggleAllClass() {
     let cb = document.getElementById('allClassCheck');
     let sInput = document.getElementById('studentInput');
+    let msCb = document.getElementById('multiSelectCheck');
     if (cb && cb.checked) {
+        if (msCb) msCb.checked = false;
         sInput.value = "TÜM SINIF";
         sInput.disabled = true;
         handleInput(sInput);
+        syncStudentGridWithInput();
     } else {
         sInput.value = "";
         sInput.disabled = false;
         handleInput(sInput);
+        syncStudentGridWithInput();
+    }
+}
+
+function toggleMultiSelect() {
+    let msCb = document.getElementById('multiSelectCheck');
+    let cb = document.getElementById('allClassCheck');
+    if (msCb && msCb.checked) {
+        if (cb && cb.checked) {
+            cb.checked = false;
+            toggleAllClass();
+        }
+    } else {
+        // If unchecking multi-select, keep the last typed/selected valid student if any
+        let sInput = document.getElementById('studentInput');
+        if(sInput) {
+            let parts = sInput.value.split(',').map(s=>s.trim()).filter(s=>s);
+            if(parts.length > 0) {
+                sInput.value = parts[parts.length-1];
+            }
+        }
+    }
+    syncStudentGridWithInput();
+}
+
+function handleStudentInputForMultiSelect(inputElem) {
+    let msCb = document.getElementById('multiSelectCheck');
+    if (msCb && msCb.checked) {
+        let val = inputElem.value;
+        // If a user types a name and it matches a valid student exactly, ensure comma behavior.
+        // We handle appending in selectStudentCard, but here we can just let them type with commas if they want.
+        // The main magic for typing is just letting them use commas in multi-select mode.
+        // But if they type a valid name without a comma, we might want to auto-append a comma?
+        // Best to just rely on the datalist and grid for smooth multi-select, but let's allow commas anyway.
+    } else {
+        // Not multi-select mode: remove commas and only keep the last entered
+        if (inputElem.value.includes(',')) {
+            let parts = inputElem.value.split(',').map(s=>s.trim()).filter(s=>s);
+            inputElem.value = parts[parts.length-1] || "";
+        }
     }
 }
 
@@ -889,7 +932,57 @@ function delSingleStudent() {
 
 function renderPassManager() { let div = document.getElementById('studentPassList'); div.innerHTML = ""; students.sort().forEach(s => { let pass = studentPassObj[s] || ""; div.innerHTML += `<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:5px; border-bottom:1px solid rgba(0,0,0,0.1); padding:5px;"><span style="font-size:0.9rem; font-weight:600;">${s}</span><input type="text" value="${pass}" placeholder="Şifre Yok" style="width:80px; padding:4px; font-size:0.8rem; text-align:center; border:1px solid #ccc; border-radius:4px;" onchange="updateStudentPass('${s}', this.value)"></div>`; }); }
 function updateStudentPass(name, newPass) { studentPassObj[name] = newPass; syncData(); }
-function addNewBook() { let name = stripRating(document.getElementById('newBookInput').value); if(!name) return alert("Kitap adı girin."); let page = prompt("Sayfa sayısı:", "100"); if(!books.includes(name)) { books.push(name); books.sort(); } bookPages[name] = parseInt(page) || 0; document.getElementById('newBookInput').value = ""; updateUI(); syncData(); }
+function addBulkBooks() {
+    let inputStr = document.getElementById('bulkBookInput').value.trim();
+    if(!inputStr) return Swal.fire({title:'Hata', text:'Lütfen eklenecek kitapları girin.', icon:'warning', confirmButtonText:'Tamam'});
+
+    let lines = inputStr.split('\n');
+    let addedCount = 0;
+
+    lines.forEach(line => {
+        let parts = line.split('-');
+        let name = stripRating(parts[0] ? parts[0].trim() : "");
+        if(!name) return;
+
+        let page = 100; // Default
+        if(parts.length > 1) {
+            let parsedPage = parseInt(parts[parts.length - 1].trim());
+            if(!isNaN(parsedPage)) {
+                page = parsedPage;
+                // In case the book name itself had dashes, join the rest back
+                if(parts.length > 2) {
+                    name = stripRating(parts.slice(0, -1).join('-').trim());
+                }
+            } else {
+                // If the last part wasn't a valid number, the dash was just part of the title
+                name = stripRating(line.trim());
+            }
+        }
+
+        if(!books.includes(name)) {
+            books.push(name);
+            addedCount++;
+        }
+        bookPages[name] = page;
+    });
+
+    if(addedCount > 0) {
+        books.sort();
+    }
+
+    document.getElementById('bulkBookInput').value = "";
+    updateUI();
+    syncData();
+
+    Swal.fire({
+        title: 'Başarılı!',
+        text: addedCount > 0 ? addedCount + ' yeni kitap eklendi (Sayfalarıyla birlikte güncellendi).' : 'Mevcut kitapların sayfa sayıları güncellendi.',
+        icon: 'success',
+        timer: 2000,
+        showConfirmButton: false
+    });
+}
+
 function delSingleBook(name) { if(confirm(name + " kitabı silinsin mi?")) { books = books.filter(b => b !== name); delete bookPages[name]; updateUI(); syncData(); } }
 function copyReport() { navigator.clipboard.writeText(document.getElementById('reportOutput').innerText); alert("Kopyalandı!"); }
 function shareToWhatsApp() {
@@ -937,23 +1030,53 @@ function renderStudentGrid() {
 
 function selectStudentCard(studentName) {
     let sInput = document.getElementById('studentInput');
+    let msCb = document.getElementById('multiSelectCheck');
+
     if(sInput) {
-        sInput.value = studentName;
+        if (msCb && msCb.checked) {
+            let parts = sInput.value.split(',').map(s=>s.trim()).filter(s=>s);
+            let idx = parts.indexOf(studentName);
+            if(idx > -1) {
+                // Remove if already selected
+                parts.splice(idx, 1);
+            } else {
+                // Add
+                parts.push(studentName);
+            }
+            sInput.value = parts.join(', ') + (parts.length > 0 ? ', ' : '');
+        } else {
+            sInput.value = studentName;
+        }
+
         handleInput(sInput);
         renderHistory();
         updateDynamicBookList();
         syncStudentGridWithInput();
-        document.getElementById('bookInput').focus();
+
+        if (!msCb || !msCb.checked) {
+            document.getElementById('bookInput').focus();
+        }
     }
 }
 
 function syncStudentGridWithInput() {
     let grid = document.getElementById('quickStudentGrid');
     if(!grid) return;
-    let currentStudent = document.getElementById('studentInput').value.trim().toLocaleUpperCase('tr-TR');
+
+    let inputVal = document.getElementById('studentInput').value.trim();
+    let isAllClass = (inputVal === "TÜM SINIF");
+    let selectedStudents = [];
+
+    if (isAllClass) {
+        selectedStudents = students.map(s => s.toLocaleUpperCase('tr-TR'));
+    } else {
+        selectedStudents = inputVal.split(',').map(s => s.trim().toLocaleUpperCase('tr-TR')).filter(s => s);
+    }
+
     let cards = grid.querySelectorAll('.student-card');
     cards.forEach(card => {
-        if(card.textContent === currentStudent) {
+        let cardName = card.textContent.trim().toLocaleUpperCase('tr-TR');
+        if(selectedStudents.includes(cardName)) {
             card.classList.add('active');
         } else {
             card.classList.remove('active');

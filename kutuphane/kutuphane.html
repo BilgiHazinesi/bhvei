@@ -127,13 +127,18 @@
                 <div class="glass-panel">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
                         <h3 style="margin:0; color:var(--primary);">Hızlı İşlem</h3>
-                        <label style="font-size:0.85rem; color:var(--text-sub); display:flex; align-items:center; gap:5px; cursor:pointer;">
-                            <input type="checkbox" id="allClassCheck" onchange="toggleAllClass()"> Tüm Sınıf
-                        </label>
+                        <div style="display:flex; gap:10px; align-items:center;">
+                            <label style="font-size:0.85rem; color:var(--text-sub); display:flex; align-items:center; gap:5px; cursor:pointer;">
+                                <input type="checkbox" id="multiSelectCheck" onchange="toggleMultiSelect()"> Çoklu Seçim
+                            </label>
+                            <label style="font-size:0.85rem; color:var(--text-sub); display:flex; align-items:center; gap:5px; cursor:pointer;">
+                                <input type="checkbox" id="allClassCheck" onchange="toggleAllClass()"> Tüm Sınıf
+                            </label>
+                        </div>
                     </div>
-                    <p style="font-size:0.75rem; color:var(--text-sub); margin-bottom:10px; margin-top:-10px;">Çoklu işlem için isim/kitap arasına virgül (,) koyun. Hızlı seçim için listeden tıklayın.</p>
+                    <p style="font-size:0.75rem; color:var(--text-sub); margin-bottom:10px; margin-top:-10px;">Hızlı seçim için listeden tıklayın.</p>
                     <div id="quickStudentGrid" class="student-grid"></div>
-                    <div class="input-wrapper" style="margin-top: 10px;"><input type="text" list="studentList" id="studentInput" placeholder="Öğrenci Seçiniz (Ali, Ayşe...)" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" oninput="handleInput(this); renderHistory(); syncStudentGridWithInput();" onchange="updateDynamicBookList()" onkeydown="if(event.key === 'Enter') document.getElementById('bookInput').focus();"><i class="fas fa-times-circle clear-btn" onclick="clearField('studentInput', () => { renderHistory(); updateDynamicBookList(); syncStudentGridWithInput(); })"></i></div>
+                    <div class="input-wrapper" style="margin-top: 10px;"><input type="text" list="studentList" id="studentInput" placeholder="Öğrenci Seçiniz (Ali, Ayşe...)" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" oninput="handleInput(this); handleStudentInputForMultiSelect(this); renderHistory(); syncStudentGridWithInput();" onchange="updateDynamicBookList()" onkeydown="if(event.key === 'Enter') document.getElementById('bookInput').focus();"><i class="fas fa-times-circle clear-btn" onclick="clearField('studentInput', () => { renderHistory(); updateDynamicBookList(); syncStudentGridWithInput(); })"></i></div>
                     <div class="input-wrapper"><input type="text" list="bookList" id="bookInput" placeholder="Kitap Seçiniz..." autocomplete="off" autocorrect="off" spellcheck="false" oninput="handleInput(this)" onkeydown="if(event.key === 'Enter') lendBook();"><i class="fas fa-times-circle clear-btn" onclick="clearField('bookInput')"></i></div>
                     <div style="display: flex; gap: 10px;">
                         <button class="btn btn-primary" style="flex: 1;" onclick="lendBook()">Kitabı Ver</button>
@@ -151,6 +156,14 @@
 
             <div id="tab-books" class="section">
                 <div class="glass-panel">
+                    <h4 style="margin:0 0 10px 0; color:var(--text-main);">Hızlı Kitap Ekle</h4>
+                    <div class="input-wrapper" style="margin-bottom: 5px;">
+                        <textarea id="bulkBookInput" placeholder="Her satıra bir kitap adı yazın.&#10;Sayfa sayısı eklemek için tire (-) kullanın.&#10;Örn: Küçük Prens - 110" style="width:100%; height:80px; padding:10px; border-radius:12px; background:var(--input-bg); color:var(--text-main); border:var(--glass-border); font-family:inherit; resize:vertical; box-sizing:border-box;"></textarea>
+                    </div>
+                    <button class="btn btn-primary" style="margin-bottom:0;" onclick="addBulkBooks()">Kitapları Ekle</button>
+                </div>
+
+                <div class="glass-panel">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
                     <div class="filter-group" style="margin-bottom:0; flex:1;">
                         <div class="filter-chip active" onclick="filterBooks('all', this)">Tümü</div>
@@ -162,11 +175,6 @@
                     </div>
                     <div class="input-wrapper"><input type="text" id="bookSearch" placeholder="Kitap Ara..." onkeyup="handleInput(this); renderBookManager()"><i class="fas fa-times-circle clear-btn" onclick="clearField('bookSearch', renderBookManager)"></i></div>
                     <div id="bookManagerList"></div>
-                </div>
-                <div class="glass-panel">
-                    <h4 style="margin:0 0 10px 0; color:var(--text-main);">Yeni Kitap Ekle</h4>
-                    <div class="input-wrapper"><input type="text" id="newBookInput" placeholder="Kitap Adı..." oninput="handleInput(this)"><i class="fas fa-times-circle clear-btn" onclick="clearField('newBookInput')"></i></div>
-                    <button class="btn btn-primary" onclick="addNewBook()">Ekle</button>
                 </div>
             </div>
 
