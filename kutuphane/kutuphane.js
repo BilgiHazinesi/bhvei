@@ -40,6 +40,7 @@ let isDataLoaded = false;
 let tempReturnId = null;
 let currentRating = 0;
 let isEditMode = false;
+let returnEvaluationQueue = [];
 
 // Sabitler
 const RANKS = [{c:0, t:"🌱 Başlangıç"}, {c:5, t:"🥉 Okuma Çırağı"}, {c:10, t:"📖 Kitap Kurdu"},{c:15, t:"🚀 Bilgi Kaşifi"}, {c:20, t:"🏹 Kelime Avcısı"}, {c:25, t:"👑 Kütüphane Muhafızı"},{c:30, t:"🎩 Edebiyat Ustası"}, {c:35, t:"🌍 Bilge Okur"}, {c:40, t:"💎 EFSANE"}];
@@ -159,6 +160,14 @@ function studentRateBook(id) {
         currentRating = rec.rating || 0;
         document.getElementById('exitCardSelect').value = rec.cardId || "";
         document.getElementById('returnComment').value = rec.comment || "";
+
+        // Add SweetAlert2 specific custom title indicator for chain
+        let prefixText = returnEvaluationQueue.length > 0 ? `(${returnEvaluationQueue.length} Kitap Daha Var) ` : '';
+        let headerText = document.querySelector('#ratingOverlay h3');
+        if (headerText) {
+            headerText.innerHTML = `${prefixText} ${rec.book} - Değerlendirme`;
+        }
+
     } else {
         console.error("Kayıt bulunamadı ID:", tempReturnId);
         currentRating = 0;
@@ -168,7 +177,11 @@ function studentRateBook(id) {
     
     updateStars();
     updateCardPrompt();
-    document.getElementById('ratingOverlay').style.display = 'flex';
+
+    let overlay = document.getElementById('ratingOverlay');
+    overlay.style.opacity = '0';
+    overlay.style.display = 'flex';
+    setTimeout(() => overlay.style.opacity = '1', 50); // slight fade to make chained transitions smoother
 }
 
 function returnBook(id) { 
@@ -213,7 +226,17 @@ function submitReturn() {
 
     if(loginMode === 'student') renderStudentPanel(); else updateUI();
     syncData();
-    closeRatingModal();
+
+    // Auto-pop from queue if chained returns are active
+    if (returnEvaluationQueue.length > 0) {
+        document.getElementById('ratingOverlay').style.display = 'none'; // Temporarily hide
+        setTimeout(() => {
+            let nextId = returnEvaluationQueue.shift();
+            studentRateBook(nextId);
+        }, 300);
+    } else {
+        closeRatingModal();
+    }
 }
 
 // --- RENDER FUNCTIONS ---
@@ -603,9 +626,9 @@ function lendBook() {
     
     let cb = document.getElementById('allClassCheck');
     if (!cb || !cb.checked) {
-        sInput.value = "";
-        handleInput(sInput);
-        sInput.focus();
+        // Keep active student and re-render grid
+        syncStudentGridWithInput();
+        bInput.focus();
     } else {
         bInput.focus();
     }
@@ -614,48 +637,25 @@ function lendBook() {
     syncData(); 
 }
 
-function bulkReturnBooks() {
-    const sInput = document.getElementById('studentInput');
-    const bInput = document.getElementById('bookInput');
-    const sVal = sInput.value; 
-    const bVal = bInput.value;
-    
-    let targetStudents = getTargetStudents(sVal);
-    let targetBooks = getTargetBooks(bVal);
-    
-    if(targetStudents.length === 0) { alert("İade alacak öğrenci(leri) belirtin!"); return; }
-    if(targetBooks.length === 0) { alert("Lütfen iade alınacak spesifik kitabı veya kitapları belirtin!"); return; }
-    
-    let timeStr = getLocalTime();
-    let returnedCount = 0;
-    
-    records.forEach(r => {
-        if (r.status === "Okuyor" && targetStudents.includes(r.student)) {
-            if (targetBooks.includes(r.book)) {
-                r.status = "İade Etti";
-                r.returnDate = timeStr;
-                returnedCount++;
-            }
+function processBulkReturns() {
+    let checkboxes = document.querySelectorAll('.return-checkbox:checked');
+    let selectedIds = Array.from(checkboxes).map(cb => cb.value);
+
+    if (selectedIds.length === 0) {
+        if (typeof Swal !== 'undefined') {
+            Swal.fire('Uyarı', 'Lütfen iade alınacak kitapları seçin.', 'warning');
+        } else {
+            alert("Lütfen iade alınacak kitapları seçin.");
         }
-    });
-    
-    if (returnedCount > 0) {
-        bInput.value = ""; 
-        handleInput(bInput); 
-        
-        let cb = document.getElementById('allClassCheck');
-        if (!cb || !cb.checked) {
-            sInput.value = "";
-            handleInput(sInput);
-            sInput.focus();
-        }
-        
-        updateUI();
-        syncData();
-        alert(`${returnedCount} kitap hızlı iade alındı!`);
-    } else {
-        alert("İade edilecek açık kayıt bulunamadı.");
+        return;
     }
+
+    // Set global queue
+    returnEvaluationQueue = selectedIds;
+
+    // Start chain
+    let firstId = returnEvaluationQueue.shift();
+    studentRateBook(firstId);
 }
 
 
@@ -670,11 +670,16 @@ function renderHistory() {
     
     if(list.length === 0) div.innerHTML = "<p style='text-align:center; opacity:0.7;'>Kayıt yok.</p>";
     
+    let hasReading = false;
+
     list.forEach(r => { 
         let actionBtn = ""; 
+        let checkboxHtml = "";
         let dateDisplay = `<i class="far fa-calendar-alt" style="opacity:0.7; margin-right:4px;"></i>${r.date}`; 
 
         if (r.status === "Okuyor") { 
+            hasReading = true;
+            checkboxHtml = `<input type="checkbox" class="return-checkbox" value="${r.id}" style="margin-right: 10px; flex-shrink: 0;">`;
             actionBtn = `<div style="display:flex; gap:5px;"><button class="btn-return" onclick="returnBook('${r.id}')">İade Al</button><button class="btn-return" style="background:#8b5cf6; width:36px; height:36px; padding:0; display:flex; align-items:center; justify-content:center;" onclick="quickReturn('${r.id}')" title="Hızlı İade (Yorumsuz)"><i class="fas fa-bolt"></i></button><button class="btn-delete" style="width:36px; height:36px; padding:0; display:flex; align-items:center; justify-content:center;" onclick="deleteRecord('${r.id}')" title="Hatalı kaydı sil"><i class="fas fa-trash"></i></button></div>`; 
             
             if (r.date) {
@@ -716,8 +721,13 @@ function renderHistory() {
             actionBtn = `<div style="display:flex; gap:5px; align-items:center;">${mainAction}<button class="btn-delete" style="width:36px; height:36px; padding:0; display:flex; align-items:center; justify-content:center;" onclick="deleteRecord('${r.id}')" title="Hatalı kaydı sil"><i class="fas fa-trash"></i></button></div>`;
         } 
         
-        div.innerHTML += `<div class="list-item"><div class="item-content"><h4>${r.book}</h4><div style="margin-top:5px; font-size:0.85rem; color:var(--text-sub); display:flex; flex-direction:column; gap:4px;"><span><i class="far fa-user" style="opacity:0.7; margin-right:4px;"></i>${r.student}</span><span>${dateDisplay}</span></div></div>${actionBtn}</div>`; 
+        div.innerHTML += `<div class="list-item" style="display:flex; align-items:center;">${checkboxHtml}<div class="item-content" style="flex:1;"><h4>${r.book}</h4><div style="margin-top:5px; font-size:0.85rem; color:var(--text-sub); display:flex; flex-direction:column; gap:4px;"><span><i class="far fa-user" style="opacity:0.7; margin-right:4px;"></i>${r.student}</span><span>${dateDisplay}</span></div></div>${actionBtn}</div>`;
     });
+
+    let bulkBtn = document.getElementById('bulkReturnBtn');
+    if (bulkBtn) {
+        bulkBtn.style.display = (hasReading && sVal) ? 'block' : 'none';
+    }
 }
 
 function updateProgressBar() { 
@@ -736,7 +746,18 @@ function switchTab(id, btn) { document.querySelectorAll('.section').forEach(el =
 function selectStar(n) { currentRating = n; updateStars(); }
 function updateStars() { let btns = document.getElementById('starGroup').children; for(let i=0; i<btns.length; i++) { if(i < currentRating) btns[i].classList.add('selected'); else btns[i].classList.remove('selected'); } }
 function updateCardPrompt() { let val = document.getElementById('exitCardSelect').value; let box = document.getElementById('cardPromptBox'); let wrap = document.getElementById('commentWrapper'); if(val && EXIT_CARDS[val]) { box.innerHTML = `<i class="fas fa-question-circle"></i> ${EXIT_CARDS[val].prompt}`; box.style.display = 'flex'; wrap.style.display = 'block'; } else { box.style.display = 'none'; wrap.style.display = 'block'; } }
-function closeRatingModal() { document.getElementById('ratingOverlay').style.display = 'none'; tempReturnId = null; }
+function closeRatingModal() {
+    document.getElementById('ratingOverlay').style.display = 'none';
+    tempReturnId = null;
+
+    // Auto-pop from queue if chained returns are active
+    if (returnEvaluationQueue.length > 0) {
+        setTimeout(() => {
+            let nextId = returnEvaluationQueue.shift();
+            studentRateBook(nextId);
+        }, 300);
+    }
+}
 
 function toggleEditMode() { isEditMode = !isEditMode; document.getElementById('editToggleBtn').classList.toggle('active'); document.getElementById('editToggleBtn').innerText = isEditMode ? '✅ Bitir' : '✏️ Düzenle'; renderBookManager(); }
 function saveBookEdits(index) { let oldName = books[index]; let nameInput = document.getElementById(`edit-name-${index}`); let pageInput = document.getElementById(`edit-page-${index}`); if (!nameInput || !pageInput) return; let newName = nameInput.value.trim(); let newPage = parseInt(pageInput.value) || 0; if(!newName) return alert("Kitap adı boş olamaz."); if(newName !== oldName) { books[index] = newName; if(bookPages[oldName]) delete bookPages[oldName]; records.forEach(r => { if(r.book === oldName) r.book = newName; }); } bookPages[newName] = newPage; alert("Kaydedildi!"); books.sort(); renderBookManager(); updateUI(); syncData(); }
@@ -898,6 +919,46 @@ function populateDatalists() {
     let sLogin = document.getElementById('studentListLogin'); if(sLogin) sLogin.innerHTML = ''; 
     students.sort().forEach(s => { sl.innerHTML += `<option value="${s}">`; if(sLogin) sLogin.innerHTML += `<option value="${s}">`; }); 
     updateDynamicBookList();
+    renderStudentGrid();
+}
+
+function renderStudentGrid() {
+    let grid = document.getElementById('quickStudentGrid');
+    if(!grid) return;
+    grid.innerHTML = '';
+    students.sort().forEach(s => {
+        let div = document.createElement('div');
+        div.className = 'student-card';
+        div.textContent = s;
+        div.onclick = () => selectStudentCard(s);
+        grid.appendChild(div);
+    });
+}
+
+function selectStudentCard(studentName) {
+    let sInput = document.getElementById('studentInput');
+    if(sInput) {
+        sInput.value = studentName;
+        handleInput(sInput);
+        renderHistory();
+        updateDynamicBookList();
+        syncStudentGridWithInput();
+        document.getElementById('bookInput').focus();
+    }
+}
+
+function syncStudentGridWithInput() {
+    let grid = document.getElementById('quickStudentGrid');
+    if(!grid) return;
+    let currentStudent = document.getElementById('studentInput').value.trim().toLocaleUpperCase('tr-TR');
+    let cards = grid.querySelectorAll('.student-card');
+    cards.forEach(card => {
+        if(card.textContent === currentStudent) {
+            card.classList.add('active');
+        } else {
+            card.classList.remove('active');
+        }
+    });
 }
 
 function updateDynamicBookList() {
