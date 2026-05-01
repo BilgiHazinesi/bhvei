@@ -442,6 +442,7 @@
         width: 90%;
         max-width: 400px;
         border: 1px solid #374151;
+        transition: transform 0.3s ease;
       }
       .bulk-header {
         display: flex;
@@ -493,6 +494,29 @@
         transition: 0.2s;
       }
 
+      .btn-kapat-secim {
+         position: absolute;
+         top: -12px;
+         left: -10px;
+         background: var(--danger);
+         color: white;
+         border: 2px solid #1f2937;
+         border-radius: 50%;
+         width: 28px;
+         height: 28px;
+         display: flex;
+         align-items: center;
+         justify-content: center;
+         cursor: pointer;
+         box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+         transition: 0.2s;
+         z-index: 1001;
+      }
+      .btn-kapat-secim:hover {
+         transform: scale(1.15);
+         background: #dc2626;
+      }
+
       #genelToplamAlani {
         background: linear-gradient(
           135deg,
@@ -542,6 +566,47 @@
         background: var(--bg-main);
         font-weight: 600;
         color: var(--text-main);
+      }
+
+      #renkSeridiWrapper {
+         display: none;
+         background: var(--bg-card);
+         padding: 10px 15px;
+         border-radius: 10px;
+         border: 1px solid var(--border-color);
+         margin-bottom: 15px;
+         box-shadow: var(--card-shadow);
+      }
+      .renk-seridi-icerik {
+         display: flex;
+         gap: 12px;
+         align-items: center;
+         overflow-x: auto;
+         padding-bottom: 5px;
+      }
+      .renk-swatch-kapsayici {
+         display: flex;
+         flex-direction: column;
+         align-items: center;
+         gap: 4px;
+         cursor: pointer;
+         transition: 0.2s;
+      }
+      .renk-swatch-kapsayici:hover {
+         transform: scale(1.1);
+      }
+      .renk-swatch {
+         width: 26px;
+         height: 26px;
+         border-radius: 50%;
+         box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+         border: 2px solid var(--bg-card);
+      }
+      .renk-isim {
+         font-size: 9px;
+         font-weight: 600;
+         color: var(--text-muted);
+         white-space: nowrap;
       }
 
       #login-screen {
@@ -851,6 +916,15 @@
         </div>
       </div>
 
+    <!-- RENKLİ ETİKET HIZLI SEÇİM ŞERİDİ -->
+    <div id="renkSeridiWrapper">
+      <div style="font-size: 11px; font-weight: 700; color: var(--primary); margin-bottom: 8px; display:flex; align-items:center; gap:5px;">
+        <span class="material-icons-round" style="font-size:14px">palette</span> Renkle Hızlı Seç (Hesapla)
+      </div>
+      <div id="renkSeridiAlani" class="renk-seridi-icerik">
+      </div>
+    </div>
+
       <div
         id="durumMesaji"
         style="
@@ -945,6 +1019,11 @@
 
       <!-- TOPLU İŞLEM MENÜSÜ (GELİŞTİRİLDİ) -->
       <div id="bulkActionParams">
+      <!-- SEÇİMİ KAPAT BUTONU (SOL ÜST) -->
+      <button class="btn-kapat-secim" onclick="secimiTemizle()" title="Seçimleri İptal Et">
+         <span class="material-icons-round" style="font-size:18px">close</span>
+      </button>
+
         <div class="bulk-header">
           <div class="bulk-header-text">
             <span
@@ -1041,8 +1120,12 @@
             </button>
           </div>
 
-          <!-- Klasik Durumlar -->
+          <!-- Klasik Durumlar & YENİ: Etiketi Sil -->
           <div style="display: flex; gap: 8px; width: 100%">
+            <!-- YENİ: Etiketi Sil / Durumu Sıfırla Butonu -->
+            <button class="btn-toplu" style="background:#4b5563;" onclick="secilenlerinEtiketiniSil()" title="Özel etiketi veya hesaplandı durumunu silip 'Ödenmedi' yapar">
+               <span class="material-icons-round" style="font-size:18px">layers_clear</span> SİL
+            </button>
             <button
               class="btn-toplu btn-hesaplandi"
               onclick="secilenleriHesaplandiYap()"
@@ -1362,6 +1445,8 @@
         var grandTotalPara = 0;
         globalMesajlar = {};
 
+        var ekrandakiOzelRenkler = new Map();
+
         for (var ay in groupedByMonth) {
           var ayTotal = 0;
           html += `<div class="ay-baslik"><span>📅 ${ay}</span><span id="ay-toplam-${ay.replace(/\s/g, "")}"></span></div>`;
@@ -1403,23 +1488,26 @@
               toplamDers += ders.duration;
               var tarihSade = ders.date.split(" ")[0];
 
-              // Durum (Hesaplandı veya Özel Etiket) Parsing İşlemi
               var durumClass = "";
               var durumHtml = "";
+              var satirRengi = "";
 
-              if (ders.status && ders.status !== "") {
+              if (ders.status && ders.status !== "" && ders.status !== "Ödenmedi") {
                 if (ders.status === "Hesaplandı") {
                   durumClass = "hesaplandi";
                   durumHtml =
                     '<span class="durum-etiket hesaplandi" style="margin-right:10px;">Hesaplandı</span>';
                 } else if (ders.status.startsWith("CUSTOM:")) {
-                  // CUSTOM:Bekleniyor:#3b82f6
                   var parts = ders.status.split(":");
                   var text = parts[1] || "Özel";
                   var color = parts[2] || "#3b82f6";
                   durumClass = "ozel-durum";
-                  // inline styling for custom color
+                  satirRengi = color;
                   durumHtml = `<span class="durum-etiket" style="margin-right:10px; background-color:${color}22; color:${color}; border: 1px solid ${color}66;">${text}</span>`;
+
+                  if(!ekrandakiOzelRenkler.has(color)) {
+                     ekrandakiOzelRenkler.set(color, text);
+                  }
                 }
               }
 
@@ -1433,7 +1521,7 @@
               var sNote = ders.note ? ders.note.replace(/'/g, "\\'") : "";
 
               studentHtml += `
-                <div class="ders-satir ${durumClass}" onclick="toggleSelection(this, '${ders.rowIndex}')" data-row="${ders.rowIndex}" data-amount="${ders.amount}" data-student="${std}" data-student-safe="${safeStdName}" data-date="${tarihSade}" data-duration="${ders.duration}">
+                <div class="ders-satir ${durumClass}" onclick="toggleSelection(this, '${ders.rowIndex}')" data-row="${ders.rowIndex}" data-amount="${ders.amount}" data-student="${std}" data-student-safe="${safeStdName}" data-date="${tarihSade}" data-duration="${ders.duration}" data-color="${satirRengi}">
                   <div class="checkbox-wrapper"><div class="custom-checkbox"></div></div>
                   <div class="ders-detay-wrapper">
                      <span style="display:flex; align-items:center;">📅 ${tarihSade} <b style="margin-left:5px; color:var(--primary)">${ders.duration} Ders</b></span>
@@ -1489,6 +1577,22 @@
 
         container.innerHTML = html;
 
+        var renkSeridiIcerik = document.getElementById("renkSeridiAlani");
+        renkSeridiIcerik.innerHTML = "";
+
+        if (ekrandakiOzelRenkler.size > 0) {
+            ekrandakiOzelRenkler.forEach(function(isim, renk) {
+               renkSeridiIcerik.innerHTML += `
+                  <div class="renk-swatch-kapsayici" onclick="rengeGoreSecVeHesapla('${renk}')">
+                     <div class="renk-swatch" style="background-color:${renk};"></div>
+                     <span class="renk-isim">${isim}</span>
+                  </div>`;
+            });
+            document.getElementById("renkSeridiWrapper").style.display = "block";
+        } else {
+            document.getElementById("renkSeridiWrapper").style.display = "none";
+        }
+
         if (html !== "") {
           // GENEL TOPLAM YAZDIRMA (HAM VERİ SAKLANIR)
           document
@@ -1513,6 +1617,34 @@
           if (el) el.classList.add("secili");
         });
         updateBulkBar();
+      }
+
+      function rengeGoreSecVeHesapla(hedefRenk) {
+         selectedRows.clear();
+         document.querySelectorAll('.ders-satir').forEach(r => r.classList.remove('secili'));
+
+         var hedefSatirlar = document.querySelectorAll(`.ders-satir[data-color='${hedefRenk}']`);
+
+         hedefSatirlar.forEach(r => {
+             var idx = r.getAttribute('data-row');
+             r.classList.add('secili');
+             selectedRows.add(idx);
+         });
+
+         updateBulkBar();
+
+         if(selectedRows.size > 0) {
+             document.getElementById("bulkActionParams").style.transform = "translateX(-50%) translateY(-10px)";
+             setTimeout(() => {
+                 document.getElementById("bulkActionParams").style.transform = "translateX(-50%) translateY(0)";
+             }, 300);
+         }
+      }
+
+      function secimiTemizle() {
+         selectedRows.clear();
+         document.querySelectorAll('.ders-satir').forEach(r => r.classList.remove('secili'));
+         updateBulkBar();
       }
 
       function selectAllInCard(cardId) {
@@ -1828,6 +1960,7 @@
       }
 
       function secilenlereOzelEtiketEkle() {
+        if (selectedRows.size === 0) return;
         var etiketInput = document
           .getElementById("ozelEtiketInput")
           .value.trim();
@@ -1837,6 +1970,15 @@
         updateSelectedRows(
           { status: combinedStatus },
           ".btn-toplu[onclick='secilenlereOzelEtiketEkle()']",
+          "İşleniyor...",
+        );
+      }
+
+      function secilenlerinEtiketiniSil() {
+        if (selectedRows.size === 0) return;
+        updateSelectedRows(
+          { status: "Ödenmedi" },
+          ".btn-toplu[style*='background:#4b5563']",
           "İşleniyor...",
         );
       }
