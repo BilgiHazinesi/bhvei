@@ -631,12 +631,45 @@ function getTargetStudents(sVal) {
 }
 
 function getTargetBooks(bVal) {
-    return bVal.split(',').map(x => stripRating(x)).filter(x => x);
+    // Bug 1 Fix: Ratings can contain commas (e.g. ⭐4,5). Splitting by comma blindly breaks the book string.
+    // We split by comma, but ignore commas that are between digits (like in 4,5).
+    let books = [];
+    let current = "";
+    for(let i=0; i<bVal.length; i++) {
+        if (bVal[i] === ',') {
+            let prev = i > 0 ? bVal[i-1] : "";
+            let next = i < bVal.length - 1 ? bVal[i+1] : "";
+            if (/\d/.test(prev) && /\d/.test(next)) {
+                current += ',';
+            } else {
+                books.push(current);
+                current = "";
+            }
+        } else {
+            current += bVal[i];
+        }
+    }
+    if (current) books.push(current);
+
+    return books.map(x => stripRating(x)).filter(x => x);
 }
 
 function lendBook() { 
     const sInput = document.getElementById('studentInput');
     const bInput = document.getElementById('bookInput');
+
+    // Bug 2 Fix: Ensure lending is single-student focused (except "Tüm Sınıf").
+    // If multi-select was left on (intended for returns), turn it off and pick the last selected student.
+    let msCb = document.getElementById('multiSelectCheck');
+    if (msCb && msCb.checked) {
+        msCb.checked = false;
+        let parts = sInput.value.split(',').map(s=>s.trim()).filter(s=>s);
+        if(parts.length > 0) {
+            sInput.value = parts[parts.length - 1];
+            handleInput(sInput);
+        }
+    }
+
     const sVal = sInput.value; 
     const bVal = bInput.value; 
     
@@ -703,13 +736,30 @@ function processBulkReturns() {
 
 
 function renderHistory() { 
-    const sVal = document.getElementById('studentInput').value.trim().toLocaleUpperCase('tr-TR');
+    const sValRaw = document.getElementById('studentInput').value.trim();
+    const isMulti = document.getElementById('multiSelectCheck') && document.getElementById('multiSelectCheck').checked;
+
+    // Parse student names correctly based on mode
+    let selectedStudents = [];
+    if (sValRaw) {
+        if (isMulti) {
+            selectedStudents = sValRaw.split(',').map(s => s.trim().toLocaleUpperCase('tr-TR')).filter(s => s);
+        } else {
+            selectedStudents = [sValRaw.toLocaleUpperCase('tr-TR')];
+        }
+    }
+
     const div = document.getElementById('historyList'); 
     if(!div) return;
     div.innerHTML = ""; 
     let list; 
-    if(sVal) list = records.filter(r => r.student === sVal);
-    else list = records.filter(r => r.status === "Okuyor"); 
+
+    if (selectedStudents.length > 0) {
+        // Find records for ALL selected students
+        list = records.filter(r => selectedStudents.includes(r.student));
+    } else {
+        list = records.filter(r => r.status === "Okuyor");
+    }
     
     if(list.length === 0) div.innerHTML = "<p style='text-align:center; opacity:0.7;'>Kayıt yok.</p>";
     
@@ -757,7 +807,7 @@ function renderHistory() {
             }
 
         } else { 
-            let mainAction = sVal 
+            let mainAction = (selectedStudents.length > 0)
                 ? `<button class="btn-comment" onclick="returnBook('${r.id}')"><i class="fas fa-edit"></i> Yorumla</button>`
                 : `<span style="font-size:0.8rem;"><i class="far fa-calendar-check" style="opacity:0.7; margin-right:4px;"></i>${r.returnDate}</span>`; 
             
@@ -769,7 +819,14 @@ function renderHistory() {
 
     let bulkBtn = document.getElementById('bulkReturnBtn');
     if (bulkBtn) {
-        bulkBtn.style.display = (hasReading && sVal) ? 'block' : 'none';
+        // Show bulk return btn if there are books to return AND a student is selected
+        bulkBtn.style.display = (hasReading && selectedStudents.length > 0) ? 'block' : 'none';
+
+        if (hasReading && selectedStudents.length > 0) {
+            // Update button text to reflect total books held
+            let readingCount = list.filter(r => r.status === "Okuyor").length;
+            bulkBtn.innerHTML = `Seçilenleri İade Al`;
+        }
     }
 }
 
