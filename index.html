@@ -765,6 +765,31 @@
       </div>
     </div>
 
+    <!-- ÖĞRENCİ AYAR MODALI -->
+    <div id="studentModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:10000; align-items:center; justify-content:center; backdrop-filter: blur(3px);">
+      <div class="kart" style="width: 90%; max-width: 350px; padding: 20px; margin: 0">
+        <div style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; margin-bottom: 15px;">
+          <h3 style="margin: 0; color: var(--text-main);">🧑‍🎓 Öğrenci Ayarları</h3>
+          <button class="btn-tehlike" onclick="deleteStudent()" title="Öğrenciyi Sil" style="padding: 5px; height: 30px;">
+             <span class="material-icons-round" style="font-size:18px">person_remove</span>
+          </button>
+        </div>
+
+        <input type="hidden" id="studentOldName">
+
+        <label>Öğrenci Adı</label>
+        <input type="text" id="studentNewName">
+
+        <label>Birim Ücret (₺/Ders)</label>
+        <input type="number" id="studentNewRate" placeholder="Örn: 500">
+
+        <div style="display: flex; gap: 10px; margin-top: 20px">
+          <button class="btn-kalem" onclick="closeStudentModal()" style="flex: 1; margin: 0">İptal</button>
+          <button id="saveStudentBtn" class="btn-ana" onclick="saveStudentSettings()" style="flex: 1; margin: 0">Kaydet</button>
+        </div>
+      </div>
+    </div>
+
     <!-- DÜZENLEME MODALI -->
     <div id="editModal">
       <div
@@ -1193,6 +1218,7 @@
       var currentUserUid = null;
       var globalMesajlar = {};
       var knownStudents = [];
+      window.studentRates = {}; // Öğrenciye özel ücretleri tutmak için eklendi
       var cachedUnpaidData = {}; // Artık Firebase'den çekeceğiz.
       var selectedRows = new Set();
       var defaultRate = 500; // Varsayılan ücret
@@ -1334,8 +1360,13 @@
           // Öğrencileri getir
           const studentsSnap = await getStudentsRef().get();
           knownStudents = [];
+          window.studentRates = {};
           studentsSnap.forEach((doc) => {
             knownStudents.push([doc.id]); // [["Ahmet"], ["Mehmet"]] şeklinde bekliyor
+            let data = doc.data();
+            if(data.rate) {
+               window.studentRates[doc.id] = data.rate;
+            }
           });
 
           // Ödenmemiş (arşivlenmemiş) dersleri getir
@@ -1529,12 +1560,16 @@
             );
             var safeStdName = std.replace(/\s/g, "");
 
+            var ozelUcret = window.studentRates[std] ? window.studentRates[std] : defaultRate;
+
             var studentHtml = `
               <div class="kart" id="card-${safeStdName}-${ay.replace(/\s/g, "")}">
                  <div class="baslik">
                     <div class="baslik-sol">
                        <span class="material-icons-round" style="font-size:20px; color:var(--primary)">person</span>
                        <span style="font-weight:700;">${std}</span>
+                       <span class="material-icons-round" style="font-size:14px; color:var(--text-muted); cursor:pointer; margin-left:4px;" onclick="openStudentModal('${std}', ${ozelUcret})" title="Öğrenciyi Düzenle">edit</span>
+                       <span style="font-size:10px; color:var(--text-muted); background:var(--bg-main); padding:2px 4px; border-radius:4px; margin-left:4px;" title="Uygulanan Birim Ücret">${ozelUcret}₺</span>
                        <span style="font-size:11px; color:var(--danger); background:rgba(239, 68, 68, 0.1); padding:2px 6px; border-radius:6px; margin-left:6px; border:1px solid rgba(239, 68, 68, 0.2);" title="Öğrencinin tüm aylardaki toplam ödenmemiş bakiyesi">Bakiye: ${ogrenciGenelToplamText}</span>
                     </div>
                     <div class="baslik-sag">
@@ -1801,6 +1836,105 @@
         document.getElementById("editModal").style.display = "none";
       }
 
+      function openStudentModal(studentName, currentRate) {
+        document.getElementById("studentOldName").value = studentName;
+        document.getElementById("studentNewName").value = studentName;
+        document.getElementById("studentNewRate").value = currentRate;
+        document.getElementById("studentModal").style.display = "flex";
+      }
+
+      function closeStudentModal() {
+        document.getElementById("studentModal").style.display = "none";
+      }
+
+      async function saveStudentSettings() {
+        var btn = document.getElementById("saveStudentBtn");
+        var oldName = document.getElementById("studentOldName").value;
+        var newName = document.getElementById("studentNewName").value.trim();
+        var newRate = parseFloat(document.getElementById("studentNewRate").value);
+
+        if (!newName || !newRate) {
+          alert("Lütfen öğrenci adı ve birim ücreti doldurun!");
+          return;
+        }
+
+        btn.innerHTML = '<span class="material-icons-round" style="animation:spin 1s infinite linear;">sync</span>';
+        btn.disabled = true;
+
+        try {
+          // If name changed, we need to update all lessons for this student
+          if (oldName !== newName) {
+             var lessonsSnap = await getLessonsRef().where("student", "==", oldName).get();
+             var batch = fsDB.batch();
+
+             lessonsSnap.forEach(doc => {
+               batch.update(doc.ref, { student: newName });
+             });
+
+             // Also update Students collection: create new, delete old
+             var oldStudentRef = getStudentsRef().doc(oldName);
+             var newStudentRef = getStudentsRef().doc(newName);
+
+             batch.set(newStudentRef, { name: newName, rate: newRate }, { merge: true });
+             batch.delete(oldStudentRef);
+
+             await batch.commit();
+          } else {
+             // Just update the rate in the existing student document
+             await getStudentsRef().doc(oldName).set({ name: oldName, rate: newRate }, { merge: true });
+          }
+
+          alert("Öğrenci ayarları kaydedildi!");
+          closeStudentModal();
+          listeyiGetir(true);
+        } catch(e) {
+          console.error(e);
+          alert("Ayarlar kaydedilirken hata oluştu!");
+        } finally {
+          btn.innerHTML = 'Kaydet';
+          btn.disabled = false;
+        }
+      }
+
+      async function deleteStudent() {
+        var oldName = document.getElementById("studentOldName").value;
+        var btn = document.querySelector("#studentModal .btn-tehlike");
+
+        // First confirmation
+        if (!confirm(`DİKKAT: "${oldName}" isimli öğrenciyi ve ONA AİT TÜM DERSLERİ silmek istediğinize emin misiniz?`)) return;
+
+        // Second confirmation
+        if (!confirm(`SON ONAY: "${oldName}" adlı öğrencinin tüm ders geçmişi kalıcı olarak SİLİNECEKTİR! Onaylıyor musunuz?`)) return;
+
+        btn.innerHTML = '<span class="material-icons-round" style="animation:spin 1s infinite linear;">sync</span>';
+        btn.disabled = true;
+
+        try {
+           var lessonsSnap = await getLessonsRef().where("student", "==", oldName).get();
+           var batch = fsDB.batch();
+
+           // Delete all lessons
+           lessonsSnap.forEach(doc => {
+             batch.delete(doc.ref);
+           });
+
+           // Delete student record
+           batch.delete(getStudentsRef().doc(oldName));
+
+           await batch.commit();
+
+           alert(`"${oldName}" başarıyla silindi.`);
+           closeStudentModal();
+           listeyiGetir(); // Full reload
+        } catch(e) {
+           console.error(e);
+           alert("Silme işlemi sırasında hata oluştu!");
+        } finally {
+           btn.innerHTML = '<span class="material-icons-round" style="font-size:18px">person_remove</span>';
+           btn.disabled = false;
+        }
+      }
+
       async function saveEditData() {
         var btn = document.getElementById("saveEditBtn");
         var docId = document.getElementById("editRowIndex").value;
@@ -1895,7 +2029,7 @@
 
         try {
           if (!ders) ders = 0;
-          let rate = fiyat ? fiyat : defaultRate;
+          let rate = fiyat ? fiyat : (window.studentRates[ogr] ? window.studentRates[ogr] : defaultRate);
           let amount = ders * rate;
 
           if (fiyat) {
@@ -1914,9 +2048,10 @@
             archived: false,
           });
 
-          await getStudentsRef().doc(ogr).set({ name: ogr }, { merge: true });
+          // Always set the used rate to the student document so it remembers it for next time if it changed
+          await getStudentsRef().doc(ogr).set({ name: ogr, rate: rate }, { merge: true });
 
-          if (fiyat) alert("✅ Fiyat Uygulandı!");
+          if (fiyat) alert("✅ Özel Fiyat Uygulandı!");
 
           btn.style.background = "var(--success)";
           btn.innerHTML =
@@ -2155,6 +2290,9 @@
           var list = document.getElementById("autocomplete-list");
           list.innerHTML = "";
           list.style.display = "none";
+
+          document.getElementById("rateInput").placeholder = "Sadece özel fiyat belirlemek için";
+
           if (!val) return;
 
           var count = 0;
@@ -2166,6 +2304,9 @@
               div.onclick = function () {
                 document.getElementById("studentInput").value = item[0];
                 list.style.display = "none";
+                if(window.studentRates[item[0]]) {
+                    document.getElementById("rateInput").placeholder = `Mevcut: ${window.studentRates[item[0]]}₺ (Değiştirmek için yazın)`;
+                }
               };
               list.appendChild(div);
               count++;
