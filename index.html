@@ -750,6 +750,21 @@
       </div>
     </div>
 
+    <!-- ŞİFRE DEĞİŞTİRME MODALI -->
+    <div id="passwordModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:10000; align-items:center; justify-content:center; backdrop-filter: blur(3px);">
+      <div class="kart" style="width: 90%; max-width: 350px; padding: 20px; margin: 0">
+        <div style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; margin-bottom: 15px;">
+          <h3 style="margin: 0; color: var(--text-main);">🔑 Şifre Değiştir</h3>
+        </div>
+        <label>Yeni Şifre (En az 6 karakter)</label>
+        <input type="password" id="newPasswordInput" placeholder="Yeni şifrenizi girin...">
+        <div style="display: flex; gap: 10px; margin-top: 20px">
+          <button class="btn-kalem" onclick="closePasswordModal()" style="flex: 1; margin: 0">İptal</button>
+          <button id="changePassBtn" class="btn-ana" onclick="changePassword()" style="flex: 1; margin: 0">Değiştir</button>
+        </div>
+      </div>
+    </div>
+
     <!-- DÜZENLEME MODALI -->
     <div id="editModal">
       <div
@@ -819,6 +834,9 @@
           Panel Pro+
         </h2>
         <div style="display: flex; gap: 10px">
+          <button class="theme-toggle" onclick="openPasswordModal()" title="Şifre Değiştir">
+            <span class="material-icons-round">key</span>
+          </button>
           <button class="theme-toggle" onclick="logout()" title="Çıkış Yap">
             <span class="material-icons-round">logout</span>
           </button>
@@ -1243,6 +1261,48 @@
 
       function logout() {
         auth.signOut();
+      }
+
+      function openPasswordModal() {
+        document.getElementById("newPasswordInput").value = "";
+        document.getElementById("passwordModal").style.display = "flex";
+      }
+
+      function closePasswordModal() {
+        document.getElementById("passwordModal").style.display = "none";
+      }
+
+      function changePassword() {
+        var newPass = document.getElementById("newPasswordInput").value;
+        var btn = document.getElementById("changePassBtn");
+
+        if (newPass.length < 6) {
+          alert("Şifre en az 6 karakter olmalıdır!");
+          return;
+        }
+
+        var user = auth.currentUser;
+        if (user) {
+          btn.innerHTML = '<span class="material-icons-round" style="animation:spin 1s infinite linear;">sync</span>';
+          btn.disabled = true;
+
+          user.updatePassword(newPass).then(() => {
+            alert("Şifreniz başarıyla değiştirildi!");
+            closePasswordModal();
+            btn.innerHTML = 'Değiştir';
+            btn.disabled = false;
+          }).catch((error) => {
+            console.error(error);
+            // Firebase re-authentication might be required if the user has been logged in for too long
+            if (error.code === 'auth/requires-recent-login') {
+              alert("Güvenlik nedeniyle şifre değiştirmeden önce tekrar giriş yapmanız gerekmektedir. Lütfen çıkış yapıp tekrar giriş yapın.");
+            } else {
+              alert("Şifre değiştirilemedi: " + error.message);
+            }
+            btn.innerHTML = 'Değiştir';
+            btn.disabled = false;
+          });
+        }
       }
 
       function getLessonsRef() {
