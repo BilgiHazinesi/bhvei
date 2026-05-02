@@ -719,6 +719,7 @@
         border-color: var(--primary);
       }
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   </head>
   <body>
     <!-- GİRİŞ EKRANI -->
@@ -1217,12 +1218,13 @@
       // FIREBASE AYARLARI
       // ==========================================
       const firebaseConfig = {
-        apiKey: "AIzaSyCzWg0ArosPt_O4t-veaqD8HdiSR9ygvFw",
-        authDomain: "bhveri.firebaseapp.com",
-        projectId: "bhveri",
-        storageBucket: "bhveri.firebasestorage.app",
-        messagingSenderId: "902116400674",
-        appId: "1:902116400674:web:96fa6356cea3d7499bf47b",
+        // Lütfen kendi Firebase yapılandırmanızı buraya ekleyin:
+        apiKey: "YOUR_API_KEY",
+        authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+        projectId: "YOUR_PROJECT_ID",
+        storageBucket: "YOUR_PROJECT_ID.appspot.com",
+        messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+        appId: "YOUR_APP_ID",
       };
 
       firebase.initializeApp(firebaseConfig);
@@ -1230,6 +1232,20 @@
       const auth = firebase.auth();
 
       // ==========================================
+
+      window.alert = function (message) {
+        Swal.fire({
+          text: message,
+          confirmButtonText: "Kapat",
+          confirmButtonColor: "var(--primary)",
+          background: "var(--bg-card)",
+          color: "var(--text-main)",
+          customClass: {
+            popup: 'kart'
+          }
+        });
+      };
+
       var currentUserUid = null;
       var globalMesajlar = {};
       var knownStudents = [];
@@ -2304,7 +2320,19 @@
       }
 
       async function arsivle() {
-        if (!confirm("Ödenmiş dersler arşive taşınacak?")) return;
+        const result = await Swal.fire({
+          title: "Emin misiniz?",
+          text: "Ödenmiş dersler arşive taşınacak?",
+          icon: "question",
+          showCancelButton: true,
+          confirmButtonColor: "var(--primary)",
+          cancelButtonColor: "var(--text-muted)",
+          confirmButtonText: "Evet, arşivle",
+          cancelButtonText: "İptal",
+          background: "var(--bg-card)",
+          color: "var(--text-main)"
+        });
+        if (!result.isConfirmed) return;
         var btn = document.querySelector(".btn-arsiv-guzel");
         var originalHTML = btn.innerHTML;
         btn.innerHTML =
