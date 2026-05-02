@@ -62,9 +62,9 @@ input:focus, select:focus, textarea:focus { border-color: var(--primary); backgr
 .btn-edit-toggle { background: 0 0; border: 1px solid var(--text-sub); color: var(--text-sub); border-radius: 12px; padding: 5px 15px; font-size: .8rem; cursor: pointer; display: flex; align-items: center; gap: 5px; }
 .btn-edit-toggle.active { background: var(--primary); color: #fff; border-color: var(--primary); }
 .btn-save-small { background: #10b981; color: #fff; border: none; padding: 8px 12px; border-radius: 8px; font-size: .8rem; cursor: pointer; white-space: nowrap; }
-.list-item { display: flex; align-items: center; justify-content: space-between; padding: 14px 0; border-bottom: 1px solid rgba(150, 150, 150, 0.15); }
+.list-item { display: flex; align-items: center; justify-content: space-between; padding: 14px 0; border-bottom: 1px solid rgba(150, 150, 150, 0.15); flex-wrap: wrap; gap: 8px; }
 .list-item:last-child { border-bottom: none; }
-.item-content { flex: 1; margin-right: 10px; overflow: hidden; }
+.item-content { flex: 1; margin-right: 10px; overflow: hidden; min-width: 120px; word-break: break-word; }
 .item-content h4 { margin: 0; font-size: 1rem; font-weight: 600; color: var(--text-main); }
 .item-content p { margin: 4px 0 0; font-size: .85rem; color: var(--text-sub); display: flex; align-items: center; gap: 5px; }
 .rank-info { font-size: .75rem; color: var(--primary); margin-top: 4px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; }

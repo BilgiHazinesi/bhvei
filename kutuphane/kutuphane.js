@@ -773,7 +773,7 @@ function renderHistory() {
         if (r.status === "Okuyor") { 
             hasReading = true;
             checkboxHtml = `<input type="checkbox" class="return-checkbox" value="${r.id}" style="margin-right: 10px; flex-shrink: 0;">`;
-            actionBtn = `<div style="display:flex; gap:5px;"><button class="btn-return" onclick="returnBook('${r.id}')">İade Al</button><button class="btn-return" style="background:#8b5cf6; width:36px; height:36px; padding:0; display:flex; align-items:center; justify-content:center;" onclick="quickReturn('${r.id}')" title="Hızlı İade (Yorumsuz)"><i class="fas fa-bolt"></i></button><button class="btn-delete" style="width:36px; height:36px; padding:0; display:flex; align-items:center; justify-content:center;" onclick="deleteRecord('${r.id}')" title="Hatalı kaydı sil"><i class="fas fa-trash"></i></button></div>`; 
+            actionBtn = `<div style="display:flex; gap:5px; flex-wrap:wrap; justify-content:flex-end;"><button class="btn-return" onclick="returnBook('${r.id}')">İade Al</button><button class="btn-return" style="background:#8b5cf6; width:36px; height:36px; min-width:36px; padding:0; display:flex; align-items:center; justify-content:center;" onclick="quickReturn('${r.id}')" title="Hızlı İade (Yorumsuz)"><i class="fas fa-bolt"></i></button><button class="btn-delete" style="width:36px; height:36px; margin:0; padding:0; display:flex; align-items:center; justify-content:center;" onclick="deleteRecord('${r.id}')" title="Hatalı kaydı sil"><i class="fas fa-trash"></i></button></div>`;
             
             if (r.date) {
                 let datePart = r.date.split(' ')[0];
@@ -811,7 +811,7 @@ function renderHistory() {
                 ? `<button class="btn-comment" onclick="returnBook('${r.id}')"><i class="fas fa-edit"></i> Yorumla</button>`
                 : `<span style="font-size:0.8rem;"><i class="far fa-calendar-check" style="opacity:0.7; margin-right:4px;"></i>${r.returnDate}</span>`; 
             
-            actionBtn = `<div style="display:flex; gap:5px; align-items:center;">${mainAction}<button class="btn-delete" style="width:36px; height:36px; padding:0; display:flex; align-items:center; justify-content:center;" onclick="deleteRecord('${r.id}')" title="Hatalı kaydı sil"><i class="fas fa-trash"></i></button></div>`;
+            actionBtn = `<div style="display:flex; gap:5px; align-items:center; flex-wrap:wrap; justify-content:flex-end;">${mainAction}<button class="btn-delete" style="width:36px; height:36px; margin:0; padding:0; display:flex; align-items:center; justify-content:center;" onclick="deleteRecord('${r.id}')" title="Hatalı kaydı sil"><i class="fas fa-trash"></i></button></div>`;
         } 
         
         div.innerHTML += `<div class="list-item" style="display:flex; align-items:center;">${checkboxHtml}<div class="item-content" style="flex:1;"><h4>${r.book}</h4><div style="margin-top:5px; font-size:0.85rem; color:var(--text-sub); display:flex; flex-direction:column; gap:4px;"><span><i class="far fa-user" style="opacity:0.7; margin-right:4px;"></i>${r.student}</span><span>${dateDisplay}</span></div></div>${actionBtn}</div>`;
